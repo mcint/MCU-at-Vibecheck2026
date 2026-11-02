@@ -1,0 +1,292 @@
+{
+ "generator": "harness-py (observed real parsers; NOT proven)",
+ "schema": "pd-local/v1",
+ "python": "3.15.0",
+ "inputs": [
+  {
+   "id": "cl_te",
+   "raw": "POST /search HTTP/1.1\r\nHost: demo\r\nContent-Length: 6\r\nTransfer-Encoding: chunked\r\n\r\n0\r\n\r\nG",
+   "parsers": {
+    "stdlib.http.client": {
+     "content_length_seen": [
+      "6"
+     ],
+     "transfer_encoding_seen": [
+      "chunked"
+     ],
+     "all_header_names": [
+      "Host",
+      "Content-Length",
+      "Transfer-Encoding"
+     ],
+     "note": "header parser only (email engine); performs no HTTP/1.1 framing",
+     "body_region_len": 6
+    },
+    "stdlib.email.parser": {
+     "content_length_seen": [
+      "6"
+     ],
+     "transfer_encoding_seen": [
+      "chunked"
+     ],
+     "defects": [],
+     "note": "RFC 5322 engine; folds continuation lines per email rules"
+    },
+    "h11": {
+     "skipped": "not installed"
+    },
+    "urllib3": {
+     "skipped": "not installed"
+    }
+   }
+  },
+  {
+   "id": "cl_dot_te",
+   "raw": "POST / HTTP/1.1\r\nHost: demo\r\nContent-Length: 40\r\nTransfer-Encoding: chunked\r\n\r\n0\r\n\r\nGET /admin HTTP/1.1\r\nHost: demo\r\n\r\n",
+   "parsers": {
+    "stdlib.http.client": {
+     "content_length_seen": [
+      "40"
+     ],
+     "transfer_encoding_seen": [
+      "chunked"
+     ],
+     "all_header_names": [
+      "Host",
+      "Content-Length",
+      "Transfer-Encoding"
+     ],
+     "note": "header parser only (email engine); performs no HTTP/1.1 framing",
+     "body_region_len": 40
+    },
+    "stdlib.email.parser": {
+     "content_length_seen": [
+      "40"
+     ],
+     "transfer_encoding_seen": [
+      "chunked"
+     ],
+     "defects": [],
+     "note": "RFC 5322 engine; folds continuation lines per email rules"
+    },
+    "h11": {
+     "skipped": "not installed"
+    },
+    "urllib3": {
+     "skipped": "not installed"
+    }
+   }
+  },
+  {
+   "id": "te_dot_cl",
+   "raw": "POST / HTTP/1.1\r\nHost: demo\r\nContent-Length: 4\r\nTransfer-Encoding: chunked\r\n\r\n23\r\nGET /admin HTTP/1.1\r\nHost: demo\r\n\r\n\r\n0\r\n\r\n",
+   "parsers": {
+    "stdlib.http.client": {
+     "content_length_seen": [
+      "4"
+     ],
+     "transfer_encoding_seen": [
+      "chunked"
+     ],
+     "all_header_names": [
+      "Host",
+      "Content-Length",
+      "Transfer-Encoding"
+     ],
+     "note": "header parser only (email engine); performs no HTTP/1.1 framing",
+     "body_region_len": 46
+    },
+    "stdlib.email.parser": {
+     "content_length_seen": [
+      "4"
+     ],
+     "transfer_encoding_seen": [
+      "chunked"
+     ],
+     "defects": [],
+     "note": "RFC 5322 engine; folds continuation lines per email rules"
+    },
+    "h11": {
+     "skipped": "not installed"
+    },
+    "urllib3": {
+     "skipped": "not installed"
+    }
+   }
+  },
+  {
+   "id": "dup_cl",
+   "raw": "POST / HTTP/1.1\r\nHost: demo\r\nContent-Length: 6\r\nContent-Length: 5\r\n\r\n12345Z",
+   "parsers": {
+    "stdlib.http.client": {
+     "content_length_seen": [
+      "6",
+      "5"
+     ],
+     "transfer_encoding_seen": [],
+     "all_header_names": [
+      "Host",
+      "Content-Length",
+      "Content-Length"
+     ],
+     "note": "header parser only (email engine); performs no HTTP/1.1 framing",
+     "body_region_len": 6
+    },
+    "stdlib.email.parser": {
+     "content_length_seen": [
+      "6",
+      "5"
+     ],
+     "transfer_encoding_seen": [],
+     "defects": [],
+     "note": "RFC 5322 engine; folds continuation lines per email rules"
+    },
+    "h11": {
+     "skipped": "not installed"
+    },
+    "urllib3": {
+     "skipped": "not installed"
+    }
+   }
+  },
+  {
+   "id": "obs_fold",
+   "raw": "POST / HTTP/1.1\r\nHost: demo\r\nContent-Length: 6\r\nX-Foo: bar\r\n\tTransfer-Encoding: chunked\r\n\r\n0\r\n\r\nG",
+   "parsers": {
+    "stdlib.http.client": {
+     "content_length_seen": [
+      "6"
+     ],
+     "transfer_encoding_seen": [],
+     "all_header_names": [
+      "Host",
+      "Content-Length",
+      "X-Foo"
+     ],
+     "note": "header parser only (email engine); performs no HTTP/1.1 framing",
+     "body_region_len": 6
+    },
+    "stdlib.email.parser": {
+     "content_length_seen": [
+      "6"
+     ],
+     "transfer_encoding_seen": [],
+     "defects": [],
+     "note": "RFC 5322 engine; folds continuation lines per email rules"
+    },
+    "h11": {
+     "skipped": "not installed"
+    },
+    "urllib3": {
+     "skipped": "not installed"
+    }
+   }
+  },
+  {
+   "id": "bare_lf",
+   "raw": "POST / HTTP/1.1\r\nHost: demo\r\nTransfer-Encoding: chunked\r\n\r\n0\n\nG",
+   "parsers": {
+    "stdlib.http.client": {
+     "content_length_seen": [],
+     "transfer_encoding_seen": [
+      "chunked"
+     ],
+     "all_header_names": [
+      "Host",
+      "Transfer-Encoding"
+     ],
+     "note": "header parser only (email engine); performs no HTTP/1.1 framing",
+     "body_region_len": 4
+    },
+    "stdlib.email.parser": {
+     "content_length_seen": [],
+     "transfer_encoding_seen": [
+      "chunked"
+     ],
+     "defects": [],
+     "note": "RFC 5322 engine; folds continuation lines per email rules"
+    },
+    "h11": {
+     "skipped": "not installed"
+    },
+    "urllib3": {
+     "skipped": "not installed"
+    }
+   }
+  },
+  {
+   "id": "chunk_ext",
+   "raw": "POST / HTTP/1.1\r\nHost: demo\r\nContent-Length: 10\r\nTransfer-Encoding: chunked\r\n\r\n5;ext=1\r\nHELLO\r\n0;x=y\r\n\r\nSMUG",
+   "parsers": {
+    "stdlib.http.client": {
+     "content_length_seen": [
+      "10"
+     ],
+     "transfer_encoding_seen": [
+      "chunked"
+     ],
+     "all_header_names": [
+      "Host",
+      "Content-Length",
+      "Transfer-Encoding"
+     ],
+     "note": "header parser only (email engine); performs no HTTP/1.1 framing",
+     "body_region_len": 29
+    },
+    "stdlib.email.parser": {
+     "content_length_seen": [
+      "10"
+     ],
+     "transfer_encoding_seen": [
+      "chunked"
+     ],
+     "defects": [],
+     "note": "RFC 5322 engine; folds continuation lines per email rules"
+    },
+    "h11": {
+     "skipped": "not installed"
+    },
+    "urllib3": {
+     "skipped": "not installed"
+    }
+   }
+  },
+  {
+   "id": "te_x",
+   "raw": "POST / HTTP/1.1\r\nHost: demo\r\nContent-Length: 6\r\nTransfer-Encoding: xchunked\r\n\r\n0\r\n\r\nG",
+   "parsers": {
+    "stdlib.http.client": {
+     "content_length_seen": [
+      "6"
+     ],
+     "transfer_encoding_seen": [
+      "xchunked"
+     ],
+     "all_header_names": [
+      "Host",
+      "Content-Length",
+      "Transfer-Encoding"
+     ],
+     "note": "header parser only (email engine); performs no HTTP/1.1 framing",
+     "body_region_len": 6
+    },
+    "stdlib.email.parser": {
+     "content_length_seen": [
+      "6"
+     ],
+     "transfer_encoding_seen": [
+      "xchunked"
+     ],
+     "defects": [],
+     "note": "RFC 5322 engine; folds continuation lines per email rules"
+    },
+    "h11": {
+     "skipped": "not installed"
+    },
+    "urllib3": {
+     "skipped": "not installed"
+    }
+   }
+  }
+ ]
+}

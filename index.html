@@ -23,12 +23,12 @@ iframe{width:100%;height:76vh;border:1px solid var(--line);border-radius:10px;ba
 footer{color:var(--dim);font-size:.8rem;padding:1.5rem 1.3rem}
 </style></head><body>
 <header><h1>MCU · Vibecheck 2026</h1>
-<div class="sub">Three demos: usable software, formally verified. Each is viewable here (embedded) and standalone in its own folder. Lean does the checking; the on-screen artifact shows what it checked.</div></header>
+<div class="sub">Five demos: usable software, formally verified. Each is viewable here (embedded) and standalone in its own folder. Lean does the checking; the on-screen artifact shows what it checked.</div></header>
 <nav id="nav"></nav>
 <main>
  <section id="s-http" class="on">
    <div class="bar"><h2>HTTP parser differentials</h2><span class="pitch">Two parsers, one request, two meanings → request smuggling. Pick a crafted request; rejects in red; open the front-end × back-end matrix to see which pairings desync.</span>
-     <a href="http-parser-differentials/index.html" target="_blank">open standalone ↗</a></div>
+     <a href="http-parser-differentials/index.html" target="_blank">open standalone ↗</a> · <a href="http-parser-differentials/index-v2.html" target="_blank">v2: hinge view, legend, history↔current timeline ↗</a> · <a href="http-parser-differentials/index-detailed.html" target="_blank">v1 detailed ↗</a></div>
    <iframe src="http-parser-differentials/index.html" title="HTTP parser differentials"></iframe>
    <div class="refs">refs: <a href="http-parser-differentials/refs/BACKGROUND.md">BACKGROUND</a> · <a href="http-parser-differentials/refs/HTTP.md">HTTP (separability)</a> · <a href="http-parser-differentials/refs/HTTP-RECON.md">stack fingerprinting</a> · spec: <a href="http-parser-differentials/spec/">Lean model</a></div>
  </section>
@@ -43,13 +43,26 @@ footer{color:var(--dim);font-size:.8rem;padding:1.5rem 1.3rem}
      <a href="tax-policy/README.md" target="_blank">README ↗</a> · <a href="tax-policy/DEMO.md" target="_blank">DEMO ↗</a></div>
    <div class="needs">Interactive version is Lean-backed (calls a local API), so it runs standalone, not embedded:
      <code>cd tax-policy &amp;&amp; python3 demo.py --port 8768</code> → <code>http://127.0.0.1:8768/</code>. Screenshot below; Lean specs in <code>tax-policy/TaxGame/</code>.</div>
-   <img class="shot" src="tax-policy/screenshot-cliff.png" alt="Policy Lab — ACA cliff graph">
+   <iframe src="tax-policy/demo/index.html?embed=1" title="Policy Lab — static demo (JS mirror of the Lean definitions; auto-upgrades to compiled Lean when the server on 8768 is running)"></iframe>
    <div class="refs">theorem: <code>current_has_cliff</code> (a witness) vs <code>proposed_no_cliff</code> (∀ income). specs: <a href="tax-policy/TaxGame/">TaxGame/*.lean</a> · <a href="tax-policy/vendor/catala/">Catala source</a></div>
  </section>
+
+ <section id="s-vend">
+   <div class="bar"><h2>Rulebreakers — the vending machine</h2><span class="pitch">A drink or your coin back — never both. Claude attacks the old rules (recorded run replays offline); Lean's kernel checks every move of the repaired policy.</span>
+     <a href="vending/web/index.html" target="_blank">open standalone ↗</a> · <a href="vending/DEMO-NOTES.md" target="_blank">notes ↗</a></div>
+   <iframe src="vending/web/index.html?embed=1&autoplay=1" title="Rulebreakers vending machine"></iframe>
+   <div class="refs">theorem: <code>VendingGame.accepted_repaired_history_safe : policyReplay .repaired .waiting moves = .ok s → ¬(s.coinWithPlayer ∧ s.drinkWithPlayer)</code>. specs: <a href="vending/VendingGame/">VendingGame/*.lean</a>. Live Lean adjudication + Rush hour need <code>cd vending &amp;&amp; python3 demo.py --port 8766</code>.</div>
+ </section>
+ <section id="s-abc">
+   <div class="bar"><h2>abc / abc-1 — click one to double it</h2><span class="pitch">Three numbers; the clicked one doubles, the others drop by one. Start at 2: dead in two moves. Start at 3: immortal but capped. Start at 4: the sky. Remove the floor and your balance heuristic loses to spam — forever, by theorem.</span>
+     <a href="abc/demo/index.html" target="_blank">open standalone ↗</a> · <a href="abc/plots/index.html" target="_blank">plots ↗</a> · <a href="abc/README.md" target="_blank">README ↗</a></div>
+   <iframe src="abc/demo/index.html?embed=1" title="abc / abc-1"></iframe>
+   <div class="refs">theorems (kernel, zero sorry): <code>doomed2</code> · <code>trapped3 : ∀ p, score (runFrom .sat ⟨3,3,3⟩ p) ≤ 3</code> · <code>unbounded4_score</code> · <code>spam_optimal : ∀ p, 2 ≤ p.length → prod (runFrom .nosat s1 p) ≤ 2^N·(N−1)²</code>. specs: <a href="abc/Abc.lean">Abc.lean</a> · <a href="abc/Optimal.lean">Optimal.lean</a> · <a href="abc/Perturb.lean">Perturb.lean</a>. Terminal twin: <code>cd abc &amp;&amp; lake exe abc abc 9</code>.</div>
+ </section>
 </main>
-<footer>Team <b>MCU</b> · FMxAI Vibecheck 2026 · each demo folder is self-contained. The two parser/fault demos are static (offline); Policy Lab needs its Lean-backed server.</footer>
+<footer>Team <b>MCU</b> · FMxAI Vibecheck 2026 · each demo folder is self-contained and static-viewable; Policy Lab and Rulebreakers upgrade to live Lean adjudication when their local servers run. Source: <a href="https://github.com/mcint/MCU-at-Vibecheck2026">github.com/mcint/MCU-at-Vibecheck2026</a>.</footer>
 <script>
-const T=[['s-http','HTTP parser differentials'],['s-fault','Fault analysis (737 MAX · TMI · Therac · CF)'],['s-tax','Policy Lab (tax cliff)']];
+const T=[['s-http','HTTP parser differentials'],['s-fault','Fault analysis (737 MAX · TMI · Therac · CF)'],['s-tax','Policy Lab (tax cliff)'],['s-vend','Rulebreakers (vending)'],['s-abc','abc / abc-1 (proven par)']];
 const nav=document.getElementById('nav');
 nav.innerHTML=T.map(([id,label],k)=>`<button class="${k===0?'on':''}" data-id="${id}">${label}</button>`).join('');
 nav.querySelectorAll('button').forEach(b=>b.onclick=()=>{

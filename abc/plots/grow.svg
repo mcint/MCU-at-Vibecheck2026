@@ -1,0 +1,48 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="720" height="360" font-family="monospace" font-size="12">
+<rect width="720" height="360" fill="white"/>
+<text x="60" y="20" font-size="14" font-weight="bold">abc from (4,4,4)  play=cbaabcacbcbaabcacbcbaabc…</text>
+<text x="60" y="36" fill="#555">(4,4,4): the proven `grow` line ×3 — all three climb (theorem unbounded4)</text>
+<line x1="60" x2="700" y1="311.8779608957142" y2="311.8779608957142" stroke="#eee"/>
+<text x="54" y="315.8779608957142" text-anchor="end" fill="#666">0</text>
+<line x1="60" x2="700" y1="284.80449721476157" y2="284.80449721476157" stroke="#eee"/>
+<text x="54" y="288.80449721476157" text-anchor="end" fill="#666">1</text>
+<line x1="60" x2="700" y1="257.73103353380884" y2="257.73103353380884" stroke="#eee"/>
+<text x="54" y="261.73103353380884" text-anchor="end" fill="#666">3</text>
+<line x1="60" x2="700" y1="230.65756985285617" y2="230.65756985285617" stroke="#eee"/>
+<text x="54" y="234.65756985285617" text-anchor="end" fill="#666">7</text>
+<line x1="60" x2="700" y1="203.5841061719035" y2="203.5841061719035" stroke="#eee"/>
+<text x="54" y="207.5841061719035" text-anchor="end" fill="#666">15</text>
+<line x1="60" x2="700" y1="176.51064249095083" y2="176.51064249095083" stroke="#eee"/>
+<text x="54" y="180.51064249095083" text-anchor="end" fill="#666">31</text>
+<line x1="60" x2="700" y1="149.43717880999822" y2="149.43717880999822" stroke="#eee"/>
+<text x="54" y="153.43717880999822" text-anchor="end" fill="#666">63</text>
+<line x1="60" x2="700" y1="122.36371512904553" y2="122.36371512904553" stroke="#eee"/>
+<text x="54" y="126.36371512904553" text-anchor="end" fill="#666">127</text>
+<line x1="60" x2="700" y1="95.29025144809286" y2="95.29025144809286" stroke="#eee"/>
+<text x="54" y="99.29025144809286" text-anchor="end" fill="#666">255</text>
+<line x1="60" x2="700" y1="68.2167877671402" y2="68.2167877671402" stroke="#eee"/>
+<text x="54" y="72.2167877671402" text-anchor="end" fill="#666">511</text>
+<line x1="60" x2="700" y1="311.8779608957142" y2="311.8779608957142" stroke="#999"/>
+<text x="60.0" y="336" text-anchor="middle" fill="#666">0</text>
+<text x="107.4074074074074" y="336" text-anchor="middle" fill="#666">2</text>
+<text x="154.8148148148148" y="336" text-anchor="middle" fill="#666">4</text>
+<text x="202.22222222222223" y="336" text-anchor="middle" fill="#666">6</text>
+<text x="249.62962962962962" y="336" text-anchor="middle" fill="#666">8</text>
+<text x="297.03703703703707" y="336" text-anchor="middle" fill="#666">10</text>
+<text x="344.44444444444446" y="336" text-anchor="middle" fill="#666">12</text>
+<text x="391.85185185185185" y="336" text-anchor="middle" fill="#666">14</text>
+<text x="439.25925925925924" y="336" text-anchor="middle" fill="#666">16</text>
+<text x="486.6666666666667" y="336" text-anchor="middle" fill="#666">18</text>
+<text x="534.0740740740741" y="336" text-anchor="middle" fill="#666">20</text>
+<text x="581.4814814814815" y="336" text-anchor="middle" fill="#666">22</text>
+<text x="628.8888888888889" y="336" text-anchor="middle" fill="#666">24</text>
+<text x="676.2962962962963" y="336" text-anchor="middle" fill="#666">26</text>
+<text x="380.0" y="352" text-anchor="middle" fill="#666">turn</text>
+<text x="14" y="185.0" transform="rotate(-90 14 185.0)" text-anchor="middle" fill="#666">value (symlog)</text>
+<path d="M60.0,249.0 L83.7,257.7 L107.4,269.0 L131.1,249.0 L154.8,226.1 L178.5,230.7 L202.2,235.9 L225.9,211.7 L249.6,214.8 L273.3,218.2 L297.0,221.9 L320.7,226.1 L344.4,201.2 L368.1,175.3 L391.9,176.5 L415.6,177.8 L439.3,151.3 L463.0,152.0 L486.7,152.6 L510.4,153.3 L534.1,154.0 L557.8,127.2 L581.5,100.3 L605.2,100.5 L628.9,100.7 L652.6,73.7 L676.3,73.8 L700.0,73.9" fill="none" stroke="#d62728" stroke-width="2" stroke-dasharray=""/>
+<text x="704.0" y="77.87073171908098" fill="#d62728">a</text>
+<path d="M60.0,249.0 L83.7,257.7 L107.4,235.9 L131.1,241.9 L154.8,249.0 L178.5,226.1 L202.2,230.7 L225.9,235.9 L249.6,241.9 L273.3,218.2 L297.0,221.9 L320.7,196.9 L344.4,199.0 L368.1,201.2 L391.9,175.3 L415.6,176.5 L439.3,177.8 L463.0,179.0 L486.7,152.6 L510.4,153.3 L534.1,126.5 L557.8,126.9 L581.5,127.2 L605.2,100.3 L628.9,100.5 L652.6,100.7 L676.3,100.9 L700.0,73.9" fill="none" stroke="#1f77b4" stroke-width="2" stroke-dasharray=""/>
+<text x="704.0" y="77.87073171908098" fill="#1f77b4">b</text>
+<path d="M60.0,249.0 L83.7,226.1 L107.4,230.7 L131.1,235.9 L154.8,241.9 L178.5,249.0 L202.2,226.1 L225.9,230.7 L249.6,206.1 L273.3,208.8 L297.0,183.1 L320.7,184.6 L344.4,186.2 L368.1,187.7 L391.9,189.4 L415.6,163.2 L439.3,164.1 L463.0,137.4 L486.7,137.9 L510.4,111.1 L534.1,111.3 L557.8,111.5 L581.5,111.7 L605.2,112.0 L628.9,85.0 L652.6,85.1 L676.3,58.1 L700.0,58.2" fill="none" stroke="#2ca02c" stroke-width="2" stroke-dasharray=""/>
+<text x="704.0" y="62.18099572195847" fill="#2ca02c">c</text>
+</svg>

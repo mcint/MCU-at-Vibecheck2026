@@ -1,0 +1,589 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Parser Differentials — HTTP request-smuggling fan-out</title>
+<style>
+:root,html[data-theme=dark]{--bg:#0e1116;--panel:#171c24;--ink:#e6edf3;--mut:#9aa7b4;--line:#2a313c;
+  --ok:#2ea043;--warn:#d29922;--bad:#f85149;--acc:#58a6ff;--lean:#a371f7;
+  --ctl:#20262f;--edit:#0b0f14;--editink:#cfe3ff;--th:#1b222c;--leanbg:#1a1222;--leanline:#3a2a55;
+  --d0:#12221a;--d1:#0f1d2b;--d2:#241b10;--d3:#20122a;--d4:#0f2424;--d5:#2a1218;--d6:#1d2130;
+  --diffbg:#2a1f10;--diffink:#ffd98a;--agreebg:#102418;--agreeink:#9be7ab;--desbg:#3a1114;--desink:#ff9b93;--safebg:#0f2a18;--safeink:#8be39c;
+  --hingebg:#12161c;--fe:#5a3a0a;--be:#0f2f4a;--both:#1d3a12;--selink:#04111f}
+html[data-theme=light]{--bg:#f6f7f9;--panel:#ffffff;--ink:#1f2328;--mut:#59636e;--line:#d0d7de;
+  --ok:#1a7f37;--warn:#9a6700;--bad:#cf222e;--acc:#0969da;--lean:#6639ba;
+  --ctl:#f3f4f6;--edit:#fbfbfb;--editink:#1f2328;--th:#eef1f4;--leanbg:#f3eefc;--leanline:#c9b8ea;
+  --d0:#e3f5e8;--d1:#e0eefb;--d2:#fbeedd;--d3:#f1e4fb;--d4:#dff3f3;--d5:#fbe2e6;--d6:#e7e9f3;
+  --diffbg:#fff4d6;--diffink:#6b4a00;--agreebg:#e3f5e8;--agreeink:#145c2a;--desbg:#ffe5e5;--desink:#9b1c1c;--safebg:#e3f5e8;--safeink:#145c2a;
+  --hingebg:#fbfbfb;--fe:#ffd9a8;--be:#bfe3ff;--both:#d7f5c2;--selink:#ffffff}
+@media(prefers-color-scheme:light){html:not([data-theme]){--bg:#f6f7f9;--panel:#ffffff;--ink:#1f2328;--mut:#59636e;--line:#d0d7de;
+  --ok:#1a7f37;--warn:#9a6700;--bad:#cf222e;--acc:#0969da;--lean:#6639ba;
+  --ctl:#f3f4f6;--edit:#fbfbfb;--editink:#1f2328;--th:#eef1f4;--leanbg:#f3eefc;--leanline:#c9b8ea;
+  --d0:#e3f5e8;--d1:#e0eefb;--d2:#fbeedd;--d3:#f1e4fb;--d4:#dff3f3;--d5:#fbe2e6;--d6:#e7e9f3;
+  --diffbg:#fff4d6;--diffink:#6b4a00;--agreebg:#e3f5e8;--agreeink:#145c2a;--desbg:#ffe5e5;--desink:#9b1c1c;--safebg:#e3f5e8;--safeink:#145c2a;
+  --hingebg:#fbfbfb;--fe:#ffd9a8;--be:#bfe3ff;--both:#d7f5c2;--selink:#ffffff}}
+.theme{display:inline-flex;border:1px solid var(--line);border-radius:6px;overflow:hidden;margin-left:10px}
+.theme button{border:0;border-radius:0;padding:3px 8px;font-size:11px;background:transparent}.theme button.on{background:var(--acc);color:var(--selink)}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.45 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
+header.chrome{display:flex;align-items:center;justify-content:space-between;gap:12px;
+  padding:10px 16px;border-bottom:1px solid var(--line);background:var(--panel)}
+header.chrome h1{font-size:15px;margin:0;font-weight:600}
+header.chrome .sub{color:var(--mut);font-size:12px;font-weight:400}
+a.stand{color:var(--acc);text-decoration:none;font-size:12px;white-space:nowrap}
+a.stand:hover{text-decoration:underline}
+body.embed header.chrome{display:none}
+body.embed .theme{position:fixed;top:6px;right:130px;z-index:5}
+main{padding:12px 16px;max-width:1500px;margin:0 auto}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:12px;margin-bottom:12px}
+.explain h2{margin:0 0 6px;font-size:13px;color:var(--acc)}
+.explain p{margin:0 0 8px;color:var(--ink);font-size:13px;line-height:1.5}
+.explain .row{display:flex;gap:8px;align-items:center}
+button,select{background:var(--ctl);color:var(--ink);border:1px solid var(--line);
+  border-radius:6px;padding:5px 9px;font:inherit;cursor:pointer}
+button:hover{border-color:var(--acc)}
+button.sel{background:var(--acc);color:var(--selink);border-color:var(--acc);font-weight:600}
+.kvs{color:var(--mut);font-size:12px}
+.grid{display:grid;grid-template-columns:minmax(300px,0.9fr) 2fr;gap:12px}
+@media(max-width:900px){.grid{grid-template-columns:1fr}}
+.presets{display:flex;flex-wrap:wrap;gap:6px;margin:6px 0}
+.presets button{font-size:12px;padding:4px 8px}
+label.lab{font-size:12px;color:var(--mut);display:block;margin:8px 0 3px}
+textarea{width:100%;height:210px;background:var(--edit);color:var(--editink);border:1px solid var(--line);
+  border-radius:6px;padding:8px;font:12px/1.5 ui-monospace,monospace;resize:vertical;white-space:pre}
+.caption{font-size:12px;color:var(--warn);margin:4px 0 2px;min-height:17px}
+.scenebar{display:flex;align-items:center;gap:8px;margin-bottom:8px;flex-wrap:wrap}
+.scenebar .pos{color:var(--mut);font-size:12px}
+table{border-collapse:collapse;width:100%;font-size:12px;table-layout:fixed}
+td{height:34px;overflow:hidden;text-overflow:ellipsis}td.rowlab,th.rowlab{width:5.5em}
+td .kvs{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+th{font-weight:600;height:58px;vertical-align:top}th .rule{display:block;font-weight:400;color:var(--mut);font-size:10.5px;margin-top:1px}th a{color:inherit;text-decoration:none;border-bottom:1px dotted var(--mut)}
+.tblwrap{min-height:290px}
+th,td{border:1px solid var(--line);padding:5px 6px;text-align:left;vertical-align:top}
+th{background:var(--th);position:sticky;top:0}
+th.lean,td.lean{background:var(--leanbg);border-color:var(--leanline)}
+th.lean{color:var(--lean)}
+.servers{font-weight:400;color:var(--mut);font-size:10.5px;display:block;margin-top:2px}
+.rowlab{color:var(--mut);white-space:nowrap;font-size:11px}
+.rej{color:var(--bad);font-weight:600}
+td.d0{background:var(--d0)}td.d1{background:var(--d1)}td.d2{background:var(--d2)}
+td.d3{background:var(--d3)}td.d4{background:var(--d4)}td.d5{background:var(--d5)}td.d6{background:var(--d6)}
+.leftover{color:var(--warn)}
+.banner{font-size:12px;margin:6px 0;padding:6px 8px;border-radius:6px}
+.banner.diff{background:var(--diffbg);border:1px solid var(--warn);color:var(--diffink)}
+.banner.agree{background:var(--agreebg);border:1px solid var(--ok);color:var(--agreeink)}
+.picker{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.light{font-weight:700;padding:6px 14px;border-radius:6px;font-size:14px;letter-spacing:.5px}
+.light.DESYNC{background:var(--desbg);color:var(--desink);border:1px solid var(--bad)}
+.light.SAFE{background:var(--safebg);color:var(--safeink);border:1px solid var(--ok)}
+.pmsg{font-size:12px;color:var(--mut);flex:1;min-width:220px}
+.thmbox{font-size:12px}
+.thmbox h3{margin:0 0 6px;font-size:12px;color:var(--lean)}
+pre.lean{background:var(--edit);border:1px solid var(--leanline);border-radius:6px;padding:8px;overflow:auto;
+  color:#d7c6f5;font-size:11.5px;margin:6px 0;white-space:pre-wrap}
+pre.lean.active{border-color:var(--lean);box-shadow:0 0 0 1px var(--lean)}
+.axioms{color:var(--mut);font-size:11px}
+.badge{font-size:11px;padding:2px 7px;border-radius:10px;border:1px solid var(--line);color:var(--mut)}
+.badge.proven{color:var(--safeink);border-color:var(--ok)}
+.hl{color:var(--acc)}
+code.ref{color:var(--lean)}
+.foot{color:var(--mut);font-size:11px;margin-top:4px}
+.hingehead{font-size:11.5px;color:#666;margin:6px 0 2px}.sw{padding:0 6px;border-radius:3px}.sw.fe,.hinge .fe{background:var(--fe)}.sw.be,.hinge .be{background:var(--be)}.sw.both,.hinge .both{background:var(--both)}
+.hinge{background:var(--hingebg);color:var(--ink);border:1px solid var(--line);border-radius:6px;padding:6px 8px;font-size:12px;line-height:1.5;margin:0 0 8px;white-space:pre-wrap;max-height:200px;overflow:auto}
+.hinge .ln{color:#aaa;display:inline-block;width:2.2em}.hinge .body{color:#888}.dec{font-size:11.5px}.dec.TE{color:var(--warn)}.dec.CL{color:var(--acc)}
+
+.legend h3{margin:0 0 6px;font-size:12px;color:var(--acc)}.legend details{border-top:1px solid var(--line);padding:6px 0}.legend summary{cursor:pointer;font-weight:600}
+.legend .def{font-size:12px;color:var(--mut);margin:4px 0 6px}.legend pre.ex{background:var(--edit);color:var(--editink);border:1px solid var(--line);border-radius:6px;padding:6px 8px;font-size:11.5px;margin:0;white-space:pre-wrap}
+.legend pre.ex .crit{background:var(--fe);color:var(--ink);font-weight:600}.legend .note{font-size:11.5px;color:var(--warn);margin-top:3px}
+
+body.detail table{table-layout:auto}body.detail td{height:auto;overflow:visible;text-overflow:clip;white-space:normal}body.detail td .kvs{white-space:normal;overflow:visible}
+body.detail .tblwrap{min-height:0}tr.detailrow{display:none}body.detail tr.detailrow{display:table-row}
+.hinge .c0{outline:2px solid var(--acc)}
+.timeline h3{margin:0 0 6px;font-size:12px;color:var(--acc)}.timeline table{table-layout:auto;font-size:11.5px}.timeline td{height:auto;white-space:normal;overflow:visible}
+.tag{font-size:10px;padding:1px 6px;border-radius:9px;border:1px solid var(--line)}.tag.fixed{color:var(--safeink);border-color:var(--ok)}.tag.current{color:var(--desink);border-color:var(--bad)}.tag.spec{color:var(--lean);border-color:var(--leanline)}
+.timeline .cols{color:var(--mut);font-size:10.5px}
+</style>
+</head>
+<body>
+<header class="chrome">
+  <div><h1>Parser Differentials <span class="sub">— one HTTP request, N parsers, one provable boundary</span></h1></div>
+  <div><span class="theme" id="theme"><button data-t="light">light</button><button data-t="dark">dark</button><button data-t="system">system</button></span>
+  <span class="theme" id="view"><button data-v="compact" class="on">compact</button><button data-v="detail">detailed</button></span>
+  <a class="stand" href="./index-detailed.html" title="v1: full reasons, RFC sentence, Lean reference, differential colours">v1 detailed ↗</a>
+  <a class="stand" href="./index.html" title="alef's per-parser decisions + FE×BE matrix">alef's view ↗</a>
+  <a class="stand" href="./index-v2.html" target="_blank" rel="noopener">open standalone ↗</a></div>
+</header>
+<main>
+
+<div class="panel explain" id="explain">
+  <div class="row" style="justify-content:space-between">
+    <h2>Quick read (20s)</h2>
+    <button id="skipBtn">skip ✕</button>
+  </div>
+  <p>You're looking at <b>one crafted HTTP request</b> (left, shown as raw bytes) fanned out across
+  <b>seven real-world parser behaviours</b> (columns) plus a <b class="hl">Lean reference</b>. Each column shows
+  how many <b>body bytes</b> it frames — or whether it <b class="rej">REJECTS</b> — and any <span class="leftover">leftover
+  bytes</span> are the start of a <b>smuggled</b> request. Pick a <b>front-end × back-end</b> pair: the light reads
+  <b style="color:#ff9b93">DESYNC</b> when they disagree on the boundary and <b style="color:#8be39c">SAFE</b> when the
+  back-end rejects. The Lean column cites the <b>exact RFC 9112 sentence</b> that decides each case; the theorem box
+  shows what a sibling Lean model proves. <b>To attack it:</b> edit the bytes, or step <b>&larr; &rarr;</b> through the 8 canonical
+  smuggling inputs.</p>
+</div>
+
+<div class="scenebar">
+  <button id="prev">&larr; prev</button><button id="next">next &rarr;</button>
+  <span class="pos" id="pos"></span>
+  <span class="caption" id="cap" style="flex:1"></span>
+</div>
+
+<div class="grid">
+  <div>
+    <div class="panel">
+      <b style="font-size:12px">Canonical smuggling inputs</b>
+      <div class="presets" id="presets"></div>
+      <label class="lab">Raw request bytes — editable. <span style="color:var(--acc)">\r</span>=CR <span style="color:var(--acc)">\n</span>=LF <span style="color:var(--acc)">\t</span>=TAB (layout newlines ignored). Edit to mutate.</label>
+      <textarea id="editor" spellcheck="false"></textarea>
+      <div class="hingehead">hinge view — <span class="sw fe">front end keyed on</span> · <span class="sw be">back end keyed on</span> · <span class="sw both">both</span></div>
+      <pre id="hinge" class="hinge"></pre>
+      <div class="foot">Byte-exact; the parsers below re-run on every keystroke.</div>
+    </div>
+    <div class="panel">
+      <b style="font-size:12px">Front-end × back-end</b>
+      <div class="picker" style="margin-top:6px">
+        <span>front <select id="fe"></select></span>
+        <span>back <select id="be"></select></span>
+        <span class="light" id="light">—</span>
+      </div>
+      <div class="pmsg" id="pmsg" style="margin-top:6px"></div>
+    </div>
+  </div>
+
+  <div>
+    <div class="panel">
+      <div id="banner"></div>
+      <div style="overflow:auto">
+        <div class="tblwrap"><table id="tbl"></table></div>
+      </div>
+      <div class="foot" id="modelline"></div>
+    </div>
+    <div class="panel thmbox" id="thmbox"></div>
+    <div class="panel legend" id="legend"></div>
+    <div class="panel timeline" id="timeline"></div>
+  </div>
+</div>
+</main>
+<script>
+/* ---------- parser profiles (behaviours seen in real servers) ---------- */
+const PROFILES=[
+ {id:'strict',   name:'Strict RFC 9112', title:'Strict<br>RFC 9112', rule:'reject CL+TE, reject dup CL',
+  def:'Takes every MAY-reject in RFC 9112 §6.3: a message with both Content-Length and Transfer-Encoding is refused; differing duplicate Content-Length is refused; otherwise TE ⇒ chunked, CL ⇒ CL. Nothing ambiguous is forwarded, so this profile can never be the lenient side of a desync (theorem backend_strict_safe).',
+  ex:{raw:'POST / HTTP/1.1\r\nHost: x\r\nContent-Length: 6\r\nTransfer-Encoding: chunked\r\n\r\n0\r\n\r\nG',hi:[3,4],note:'both present → REJECT (400 / close)'}, servers:'HAProxy · Go net/http · h11 · Tomcat',
+  flags:{bareLF:false,obsFold:'reject',dupCL:'reject',teSupport:true,teMatch:'exact',clTE:'reject',unknownTE:'reject',chunkCRLF:'strict'}},
+ {id:'te-first', name:'TE-first (RFC framing)', title:'TE-first<br>(RFC framing)', rule:'TE overrides CL; dup CL rejected',
+  def:'The literal RFC 9112 §6.3 rule: if Transfer-Encoding: chunked is present it wins and Content-Length is ignored. Does not reject the CL+TE combination. Against a CL-preferring peer this is the classic CL.TE / TE.CL smuggling pair.',
+  ex:{raw:'POST / HTTP/1.1\r\nHost: x\r\nContent-Length: 6\r\nTransfer-Encoding: chunked\r\n\r\n0\r\n\r\nG',hi:[4],note:'keys on line 4 → chunked body ends at 0\\r\\n\\r\\n (0 data bytes); the G is the next request'}, servers:'nginx · hyper · Jetty(RFC7230)',
+  flags:{bareLF:false,obsFold:'reject',dupCL:'reject',teSupport:true,teMatch:'exact',clTE:'te',unknownTE:'cl',chunkCRLF:'strict'}},
+ {id:'cl-first', name:'CL-first (TE after CL)', title:'CL-first<br>(TE after CL)', rule:'any CL wins; first dup taken',
+  def:'Legacy behaviour: if any Content-Length is present it is used for framing even when Transfer-Encoding: chunked is also present; with duplicates the first value is taken. Reads obs-fold continuation lines as part of the previous header.',
+  ex:{raw:'POST / HTTP/1.1\r\nHost: x\r\nContent-Length: 6\r\nTransfer-Encoding: chunked\r\n\r\n0\r\n\r\nG',hi:[3],note:'keys on line 3 → body = 6 bytes "0\\r\\n\\r\\nG" — swallows the G'}, servers:'old Squid · some CDNs · legacy LB',
+  flags:{bareLF:false,obsFold:'join',dupCL:'first',teSupport:true,teMatch:'exact',clTE:'cl',unknownTE:'cl',chunkCRLF:'strict'}},
+ {id:'last-cl',  name:'Last-CL', title:'Last-CL<br>(dup → last)', rule:'CL wins; last dup taken',
+  def:'Like CL-first but with duplicate Content-Length headers the last value wins. The CL[0]-vs-CL[last] disagreement is the second hinge shape (theorem hinge_shapes).',
+  ex:{raw:'POST / HTTP/1.1\r\nHost: x\r\nContent-Length: 6\r\nContent-Length: 1\r\n\r\nG12345',hi:[4],note:'keys on line 4 → body 1 byte; CL-first keys on line 3 → 6 bytes'}, servers:'servers keeping the last dup Content-Length',
+  flags:{bareLF:false,obsFold:'join',dupCL:'last',teSupport:true,teMatch:'exact',clTE:'cl',unknownTE:'cl',chunkCRLF:'strict'}},
+ {id:'te-ignore',name:'TE-ignoring', title:'TE-ignoring<br>(HTTP/1.0-ish)', rule:'no chunked support; CL or nothing',
+  def:'A hop that does not implement Transfer-Encoding at all (HTTP/1.0 proxies, some embedded servers): the TE header is treated as unknown and framing falls back to Content-Length or to no body.',
+  ex:{raw:'POST / HTTP/1.1\r\nHost: x\r\nTransfer-Encoding: chunked\r\n\r\n5\r\nhello\r\n0\r\n\r\n',hi:[3],note:'line 3 is the critical one *by being ignored* → body 0 bytes; the chunked bytes become the next request'}, servers:'TE-unaware proxy · HTTP/1.0 hop',
+  flags:{bareLF:false,obsFold:'join',dupCL:'first',teSupport:false,teMatch:'exact',clTE:'cl',unknownTE:'cl',chunkCRLF:'strict'}},
+ {id:'obs-fold', name:'Obs-fold-joining', title:'Obs-fold<br>joining', rule:'folded lines joined into header',
+  def:'Honours obsolete line folding (a header continued on a line starting with space/tab, RFC 9112 §5.2 says MUST reject or replace). Joining lets a folded "Transfer-Encoding:\n chunked" be seen by this hop and missed by a strict one.',
+  ex:{raw:'POST / HTTP/1.1\r\nHost: x\r\nContent-Length: 6\r\nTransfer-Encoding:\r\n chunked\r\n\r\n0\r\n\r\nG',hi:[4,5],note:'lines 4–5 join → TE seen; strict rejects the fold'}, servers:'legacy Apache · old nginx',
+  flags:{bareLF:false,obsFold:'join',dupCL:'first',teSupport:true,teMatch:'exact',clTE:'te',unknownTE:'cl',chunkCRLF:'strict'}},
+ {id:'bare-lf',  name:'Bare-LF lenient', title:'Bare-LF<br>lenient', rule:'LF ends lines; loose TE match',
+  def:'Accepts a bare LF as a line terminator and matches "chunked" loosely inside Transfer-Encoding (e.g. "xchunked"). A strict peer sees one long header line where this hop sees two — the bare-LF hinge.',
+  ex:{raw:'POST / HTTP/1.1\r\nHost: x\r\nContent-Length: 6\nTransfer-Encoding: chunked\r\n\r\n0\r\n\r\nG',hi:[3,4],note:'the critical byte is the bare LF ending line 3: this hop sees two headers (and keys on line 4); strict sees one malformed line and rejects'}, servers:'old Node/llhttp-lenient · gunicorn(hist)',
+  flags:{bareLF:true,obsFold:'separate',dupCL:'last',teSupport:true,teMatch:'loose',clTE:'te',unknownTE:'te',chunkCRLF:'lenient'}},
+];
+
+const RULE_RFC={clTE:'RFC 9112 §6.3 ¶3: "If a message is received with both a Transfer-Encoding and a Content-Length header field, the Transfer-Encoding overrides the Content-Length … ought to be handled as an error."',
+ dupCL:'RFC 9110 §8.6: multiple Content-Length with differing values → the recipient MUST reject the message as invalid (or treat as unrecoverable).',
+ obsFold:'RFC 9112 §5.2: obs-fold — "A server that receives an obs-fold … MUST either reject the message … or replace each received obs-fold with one or more SP octets."',
+ bareLF:'RFC 9112 §2.2: "a recipient MAY recognize a single LF as a line terminator" — MAY, not MUST: the hinge is optional.',
+ teUnknown:'RFC 9112 §6.1: "A server that receives a request message with a transfer coding it does not understand SHOULD respond with 501."',
+ chunk:'RFC 9112 §7.1: chunked-body ABNF; chunk-ext and the last-chunk / trailer section.'};
+/* ---------- RFC 9112 sentences used by the Lean reference ---------- */
+const RFC={
+ teCl:{sec:'§6.3 (3)',text:'"If a message is received with both a Transfer-Encoding and a Content-Length header field, the Transfer-Encoding overrides the Content-Length. Such a message might indicate an attempt to perform request smuggling ... and ought to be handled as an error."'},
+ dupCL:{sec:'§6.3 (4)',text:'"If a message is received ... with an invalid Content-Length header field, then the message framing is invalid and the recipient MUST treat it as an unrecoverable error ... the server MUST respond with a 400 (Bad Request)."'},
+ obsFold:{sec:'§5.2',text:'"A server that receives an obs-fold ... MUST either reject the message by sending a 400 (Bad Request) ... or replace each received obs-fold with one or more SP octets prior to interpreting the field value or forwarding the message downstream."'},
+ bareLF:{sec:'§2.2',text:'"Although the line terminator for the start-line and fields is the sequence CRLF, a recipient MAY recognize a single LF as a line terminator and ignore any preceding CR." (the MAY is the hinge — strict rejects.)'},
+ chunkExt:{sec:'§7.1.1 + §6.3(3)',text:'"A recipient MUST ignore unrecognized chunk extensions." — but the co-present Content-Length + Transfer-Encoding is itself handled as an error.'},
+ teUnknown:{sec:'§6.1',text:'"A server that receives a request message with a transfer coding it does not understand SHOULD respond with 501 (Not Implemented)." — "xchunked" is not the "chunked" token.'},
+};
+
+/* ---------- 8 canonical inputs ---------- */
+const INPUTS=[
+ {id:'cl_te',label:'CL+TE',cap:'Both Content-Length and Transfer-Encoding present — RFC says TE wins and the message is an error.',rfc:RFC.teCl,
+  raw:"POST /search HTTP/1.1\r\nHost: demo\r\nContent-Length: 6\r\nTransfer-Encoding: chunked\r\n\r\n0\r\n\r\nG"},
+ {id:'cl_dot_te',label:'CL.TE',cap:'Front frames by Content-Length and forwards everything; back frames by chunked and stops at 0 — the tail is a smuggled GET /admin.',rfc:RFC.teCl,
+  raw:"POST / HTTP/1.1\r\nHost: demo\r\nContent-Length: 40\r\nTransfer-Encoding: chunked\r\n\r\n0\r\n\r\nGET /admin HTTP/1.1\r\nHost: demo\r\n\r\n"},
+ {id:'te_dot_cl',label:'TE.CL',cap:'Front frames by chunked (reads whole body); back frames by Content-Length=4 and leaves the chunk data as a new request.',rfc:RFC.teCl,
+  raw:"POST / HTTP/1.1\r\nHost: demo\r\nContent-Length: 4\r\nTransfer-Encoding: chunked\r\n\r\n23\r\nGET /admin HTTP/1.1\r\nHost: demo\r\n\r\n\r\n0\r\n\r\n"},
+ {id:'dup_cl',label:'dup CL',cap:'Two differing Content-Length headers — first-CL vs last-CL frame different bodies; strict rejects.',rfc:RFC.dupCL,
+  raw:"POST / HTTP/1.1\r\nHost: demo\r\nContent-Length: 6\r\nContent-Length: 5\r\n\r\n12345Z"},
+ {id:'obs_fold',label:'obs-fold',cap:'A Transfer-Encoding line folded (leading TAB) into X-Foo — joiners hide the TE, "separate" parsers reveal it; strict rejects.',rfc:RFC.obsFold,
+  raw:"POST / HTTP/1.1\r\nHost: demo\r\nContent-Length: 6\r\nX-Foo: bar\r\n\tTransfer-Encoding: chunked\r\n\r\n0\r\n\r\nG"},
+ {id:'bare_lf',label:'bare LF',cap:'Chunk framing terminated by bare LF — lenient parsers accept it; strict requires CRLF and rejects.',rfc:RFC.bareLF,
+  raw:"POST / HTTP/1.1\r\nHost: demo\r\nTransfer-Encoding: chunked\r\n\r\n0\n\nG"},
+ {id:'chunk_ext',label:'chunk-ext',cap:'Chunk extensions (;ext=1) must be ignored; CL+TE still make it an error for strict, and CL-first mis-frames.',rfc:RFC.chunkExt,
+  raw:"POST / HTTP/1.1\r\nHost: demo\r\nContent-Length: 10\r\nTransfer-Encoding: chunked\r\n\r\n5;ext=1\r\nHELLO\r\n0;x=y\r\n\r\nSMUG"},
+ {id:'te_x',label:'TE: xchunked',cap:'"xchunked" is not the chunked token — exact matchers fall back to CL; loose (substring) matchers treat it as chunked and desync.',rfc:RFC.teUnknown,
+  raw:"POST / HTTP/1.1\r\nHost: demo\r\nContent-Length: 6\r\nTransfer-Encoding: xchunked\r\n\r\n0\r\n\r\nG"},
+];
+
+/* ---------- framing engine (the model the Lean exe `pd` will mirror) ---------- */
+function parseChunks(region,lenient){
+  let p=0,body=0;
+  while(true){
+    let nl=region.indexOf('\n',p);
+    if(nl<0) return {reject:true,reason:'unterminated chunk size'};
+    let line=region.slice(p,nl), crlf=line.endsWith('\r');
+    if(!crlf&&!lenient) return {reject:true,reason:'bare LF in chunk framing'};
+    let hex=(crlf?line.slice(0,-1):line).split(';')[0].trim().toLowerCase();
+    if(!/^[0-9a-f]+$/.test(hex)) return {reject:true,reason:'bad chunk size "'+hex+'"'};
+    let size=parseInt(hex,16); p=nl+1;
+    if(size===0){
+      let q=p;
+      while(q<region.length){
+        let n2=region.indexOf('\n',q);
+        if(n2<0){q=region.length;break;}
+        let l2=region.slice(q,n2); q=n2+1;
+        if(l2===''||l2==='\r') break;
+      }
+      return {reject:false,bodyLen:body,rest:region.slice(q)};
+    }
+    p+=size;
+    if(region.slice(p,p+2)==='\r\n') p+=2;
+    else if(region[p]==='\n'){ if(!lenient) return {reject:true,reason:'bare LF after chunk data'}; p+=1;}
+    else return {reject:true,reason:'missing CRLF after chunk data'};
+    body+=size;
+  }
+}
+function frame(raw,f){
+  let i=0,lines=[],bareInHdr=false,bodyOff=-1;
+  while(i<=raw.length){
+    let nl=raw.indexOf('\n',i);
+    if(nl<0) return {reject:true,reason:'no header terminator (no blank line)'};
+    let line=raw.slice(i,nl),crlf=line.endsWith('\r'),text=crlf?line.slice(0,-1):line;
+    if(!crlf) bareInHdr=true;
+    i=nl+1;
+    if(text===''){bodyOff=i;break;}
+    lines.push({text,ln:lines.length+1});
+  }
+  if(bodyOff<0) return {reject:true,reason:'no header terminator'};
+  if(bareInHdr&&!f.bareLF) return {reject:true,reason:'bare LF in header block',rule:'bareLF'};
+  let headers=[];
+  for(let k=1;k<lines.length;k++){
+    let t=lines[k].text;
+    if(/^[ \t]/.test(t)){
+      if(f.obsFold==='reject') return {reject:true,reason:'obs-fold (obsolete line folding)',rule:'obsFold',dec:{kind:'obs-fold',lines:[lines[k].ln],label:'folded line '+lines[k].ln}};
+      if(f.obsFold==='join'){ if(headers.length){ headers[headers.length-1].value+=' '+t.trim(); headers[headers.length-1].lines.push(lines[k].ln);} continue; }
+      t=t.replace(/^[ \t]+/,''); /* 'separate' */
+    }
+    let ci=t.indexOf(':'); if(ci<0) continue;
+    headers.push({name:t.slice(0,ci).trim().toLowerCase(),value:t.slice(ci+1).trim(),lines:[lines[k].ln]});
+  }
+  let region=raw.slice(bodyOff);
+  let clH=headers.filter(h=>h.name==='content-length'), teH=headers.filter(h=>h.name==='transfer-encoding');
+  let cls=clH.map(h=>h.value), tes=teH.map(h=>h.value);
+  const DEC={te:()=>({kind:'TE',lines:teH.flatMap(h=>h.lines),label:'Transfer-Encoding'+(teH.length?': '+teH.map(h=>h.value).join(',')+' (line '+teH[0].lines[0]+')':'')}),
+             cl:(i)=>({kind:'CL',idx:i,lines:clH[i]?clH[i].lines:[],label:'Content-Length['+i+'] = '+(clH[i]?clH[i].value:'?')+(clH[i]?' (line '+clH[i].lines[0]+(clH.length>1?', '+(i===0?'first':'last')+' of '+clH.length:'')+')':'')}),
+             none:()=>(teH.length?{kind:'none',lines:teH.flatMap(h=>h.lines),label:'no body field — Transfer-Encoding on line '+teH[0].lines[0]+' ignored'}:{kind:'none',lines:[],label:'no body field'})};
+  let clIdx=0;
+  let teRaw=tes.join(','),hasTE=tes.length>0,teChunked=false,teUnknown=false;
+  if(hasTE){
+    if(f.teMatch==='loose') teChunked=/chunked/i.test(teRaw);
+    else{ let toks=teRaw.split(',').map(s=>s.trim().toLowerCase()).filter(Boolean);
+      teChunked=(toks[toks.length-1]==='chunked'); if(!teChunked) teUnknown=true; }
+  }
+  let clVal=null,clReject=false;
+  if(cls.length){
+    let nums=cls.map(v=>v.trim()),same=nums.every(v=>v===nums[0]);
+    if(cls.length>1&&!same){
+      if(f.dupCL==='reject') clReject=true;
+      else { clIdx=f.dupCL==='first'?0:nums.length-1; clVal=parseInt(nums[clIdx],10); }
+    } else clVal=parseInt(nums[0],10);
+    if(clVal!==null&&(isNaN(clVal)||clVal<0)) clReject=true;
+  }
+  let useChunked=false,useCL=false;
+  if(f.teSupport&&hasTE){
+    if(teChunked){
+      if(cls.length){
+        if(f.clTE==='reject') return {reject:true,reason:'both Content-Length and Transfer-Encoding',rule:'clTE',dec:{kind:'CL+TE',lines:[...teH.flatMap(h=>h.lines),...clH.flatMap(h=>h.lines)],label:'CL and TE both present → reject'}};
+        if(f.clTE==='te') useChunked=true; else useCL=true;
+      } else useChunked=true;
+    } else if(teUnknown){
+      if(f.unknownTE==='reject') return {reject:true,reason:'unrecognized transfer coding "'+teRaw+'"',rule:'teUnknown',dec:DEC.te()};
+      if(cls.length) useCL=true;
+      else return {reject:false,method:'none',bodyLen:0,rest:region,restLen:region.length,dec:DEC.none()};
+    }
+  }
+  if(!useChunked&&!useCL){
+    if(cls.length) useCL=true;
+    else if(f.teSupport&&teChunked) useChunked=true;
+    else return {reject:false,method:'none',bodyLen:0,rest:region,restLen:region.length,dec:DEC.none()};
+  }
+  if(useChunked){
+    let r=parseChunks(region,f.chunkCRLF==='lenient');
+    if(r.reject) return {reject:true,reason:r.reason,rule:'chunk',dec:DEC.te()};
+    return {reject:false,method:'chunked',bodyLen:r.bodyLen,rest:r.rest,restLen:r.rest.length,dec:DEC.te()};
+  }
+  if(clReject) return {reject:true,reason:'multiple differing Content-Length',rule:'dupCL',dec:{kind:'dupCL',lines:clH.flatMap(h=>h.lines),label:'differing duplicate Content-Length → reject'}};
+  let consumed=Math.min(clVal,region.length);
+  return {reject:false,method:'CL('+clVal+')',bodyLen:consumed,rest:region.slice(consumed),restLen:region.length-consumed,trunc:clVal>region.length,dec:DEC.cl(clIdx)};
+}
+
+/* ---------- optional: drive from the proven model (Lean exe `pd`) ---------- */
+let FIXTURES=null;
+async function loadFixtures(){
+  try{
+    const r=await fetch('./fixtures/framings.json',{cache:'no-store'});
+    if(r.ok){ FIXTURES=await r.json(); if(/^lean/i.test(FIXTURES.generator||'')) window.__leanReal=true; }
+  }catch(e){ /* file:// or absent -> fall back to built-in JS */ }
+  renderModelLine(); renderThm(null); renderAll();
+}
+
+/* ---------- escaping for the editor ---------- */
+function esc(raw){return raw.replace(/\r/g,'\\r').replace(/\n/g,'\\n').replace(/\t/g,'\\t').replace(/\\n/g,'\\n\n');}
+function unesc(t){return t.replace(/\n/g,'').replace(/\\r/g,'\r').replace(/\\n/g,'\n').replace(/\\t/g,'\t');}
+
+/* ---------- state + UI ---------- */
+let scene=0;
+const $=id=>document.getElementById(id);
+function curRaw(){return unesc($('editor').value);}
+
+function buildPresets(){
+  const p=$('presets'); p.innerHTML='';
+  INPUTS.forEach((inp,ix)=>{
+    const b=document.createElement('button');
+    b.textContent=inp.label; b.onclick=()=>{scene=ix;loadScene();};
+    b.dataset.ix=ix; p.appendChild(b);
+  });
+  [$('fe'),$('be')].forEach((sel,si)=>{
+    sel.innerHTML='';
+    PROFILES.forEach((pr,ix)=>{const o=document.createElement('option');o.value=ix;o.textContent=pr.name;sel.appendChild(o);});
+    sel.value=si===0?2:1; /* front=cl-first, back=te-first */
+    sel.onchange=renderPicker;
+  });
+}
+function loadScene(){
+  const inp=INPUTS[scene];
+  $('editor').value=esc(inp.raw);
+  $('cap').textContent=inp.cap;
+  $('pos').textContent='input '+(scene+1)+'/'+INPUTS.length+' \u2014 '+inp.label;
+  [...$('presets').children].forEach(b=>b.classList.toggle('sel',+b.dataset.ix===scene));
+  renderAll();
+}
+function sigOf(r){return r.reject?('R:'+r.reason):(r.method+'|'+r.bodyLen+'|'+r.restLen);}
+function framesFor(raw){ return PROFILES.map(p=>frame(raw,p.flags)); }
+/* Cross-check the interactive JS model against the proven Lean model file.
+   The Lean core abstracts a request to (CLs, TE?, chunkedLen) and proves
+   no-desync at the BOUNDARY; so we compare accept/reject + leftover (not the
+   decoded-vs-wire body number) on the 4 proven columns. */
+function crossCheck(raw){
+  if(!FIXTURES||!FIXTURES.inputs) return null;
+  const fx=FIXTURES.inputs.find(x=>x.raw===raw); if(!fx) return null;
+  let ok=0,tot=0,ids=[];
+  PROFILES.forEach(p=>{
+    const lv=fx.profiles&&fx.profiles[p.id]; if(!lv) return;
+    tot++; ids.push(p.id);
+    const js=frame(raw,p.flags);
+    const agree=(!!js.reject===!!lv.reject)&&(js.reject||js.restLen===lv.restLen);
+    if(agree) ok++;
+  });
+  return {ok,tot,ids};
+}
+function renderTable(){
+  const raw=curRaw();
+  const results=framesFor(raw);
+  const sigs=results.map(sigOf);
+  const uniq=[...new Set(sigs)];
+  const colorOf=s=>'d'+(uniq.indexOf(s)%7);
+  let h='<tr><th class="rowlab"></th>';
+  PROFILES.forEach(p=>h+='<th><a href="#leg-'+p.id+'" title="definition below">'+(p.title||p.name)+'</a><span class="rule">'+(p.rule||'')+'</span><span class="servers">'+p.servers+'</span></th>');
+  h+='<th class="lean"><a href="#leg-lean">Lean<br>reference</a><span class="rule">RFC 9112 §6.3, strict</span><span class="servers">proven model</span></th></tr>';
+  const inp=INPUTS[scene]||INPUTS.find(x=>x.raw===raw)||null;
+  const rfc=(inp&&inp.rfc)||RFC.teCl;
+  const rows=[['framing',r=>r.reject?'\u2014':r.method],
+              ['body',r=>r.reject?'\u2014':r.bodyLen+' B'],
+              ['leftover',r=>r.reject?'\u2014':'<span class="leftover">'+r.restLen+' B</span>'],
+              ['keyed on',r=>r.dec?'<span class="dec '+(r.dec.kind||'').replace(/[^A-Za-z]/g,'')+'">'+r.dec.label+'</span>':'\u2014'],
+              ['verdict',r=>r.reject?'<span class="rej">REJECT</span>':'OK']];
+  let body='';
+  rows.forEach(([lab,fn])=>{
+    body+='<tr><td class="rowlab">'+lab+'</td>';
+    results.forEach((r,ix)=>{ body+='<td class="'+colorOf(sigs[ix])+'" title="'+(r.reject?String(r.reason).replace(/"/g,'&quot;'):'')+'">'+fn(r)+(lab==='verdict'&&r.reject?'<span class="kvs">'+r.reason+'</span>':'')+'</td>'; });
+    const sr=results[0];
+    let lc='';
+    if(lab==='framing') lc=sr.reject?('<code class="ref">'+rfc.sec+'</code>'):sr.method;
+    else if(lab==='body') lc=sr.reject?'\u2014':sr.bodyLen+' B';
+    else if(lab==='leftover') lc=sr.reject?'\u2014':sr.restLen+' B';
+    else if(lab==='keyed on') lc=sr.dec?'<span class="dec">'+sr.dec.label+'</span>':'\u2014';
+    else lc=sr.reject?'<span class="rej">REJECT (safe)</span>':'OK';
+    body+='<td class="lean">'+lc+'</td></tr>';
+  });
+  const sr0=results[0];
+  body+='<tr class="detailrow"><td class="rowlab">how parsed</td>';
+  results.forEach((r,ix)=>{ body+='<td class="'+colorOf(sigs[ix])+'"><span class="kvs">'+(r.reject?'rejected at rule <b>'+(r.rule||'?')+'</b>: '+r.reason:(r.method==='chunked'?'read chunk sizes until the 0-chunk':String(r.method).startsWith('CL')?'took '+r.bodyLen+' bytes after the blank line':'no body')+(r.dec?' — keyed on '+r.dec.label:''))+'</span></td>'; });
+  body+='<td class="lean"><span class="kvs">'+(sr0.reject?'rejects ('+sr0.reason+')':'frames '+sr0.bodyLen+' B via '+sr0.method)+'</span></td></tr>';
+  body+='<tr class="detailrow"><td class="rowlab">RFC leaned on</td>';
+  results.forEach((r,ix)=>{ const key=r.rule||(r.dec&&r.dec.kind==='TE'?'clTE':(r.dec&&r.dec.kind==='CL'&&/of \d/.test(r.dec.label))?'dupCL':null); body+='<td class="'+colorOf(sigs[ix])+'"><span class="kvs">'+(key&&RULE_RFC[key]?RULE_RFC[key]:'\u2014')+'</span></td>'; });
+  body+='<td class="lean"><span class="kvs">'+rfc.text+'</span></td></tr>';
+  body+='<tr class="detailrow"><td class="rowlab">vs Lean ref</td>';
+  results.forEach((r,ix)=>{ const same=sigOf(r)===sigOf(sr0); body+='<td class="'+colorOf(sigs[ix])+'"><span class="kvs">'+(same?'= reference':(sr0.reject?'accepts what strict rejects (lenient side)':'differs: '+(r.reject?'rejects':r.bodyLen+' B')+' vs '+sr0.bodyLen+' B'))+'</span></td>'; });
+  body+='<td class="lean"><span class="kvs">strict (theorem strict_bottom)</span></td></tr>';
+  body+='<tr><td class="rowlab">RFC</td><td colspan="'+PROFILES.length+'" class="kvs">decisive sentence \u2192</td>'
+      +'<td class="lean"><code class="ref">RFC 9112 '+rfc.sec+'</code><br><span class="kvs">'+rfc.text+'</span></td></tr>';
+  $('tbl').innerHTML=h+body;
+  const b=$('banner');
+  if(uniq.length>1){ b.className='banner diff'; b.innerHTML='\u26a0 '+uniq.length+' distinct outcomes among the 7 parsers \u2014 this input is a <b>differential</b>. Columns sharing a colour agree.'; }
+  else { b.className='banner agree'; b.innerHTML='\u2713 all 7 parsers agree on this input (body '+results[0].bodyLen+' B).'; }
+}
+function renderPicker(){
+  const raw=curRaw();
+  const fi=+$('fe').value, bi=+$('be').value;
+  const all=framesFor(raw);
+  const F=all[fi], B=all[bi];
+  let state,msg,thm=null;
+  if(B.reject){ state='SAFE'; msg='Back-end <b>'+PROFILES[bi].name+'</b> rejects the message ('+B.reason+'). Nothing ambiguous is forwarded.'; if(bi===0)thm='backend_strict_safe'; }
+  else if(F.reject){ state='SAFE'; msg='Front-end <b>'+PROFILES[fi].name+'</b> rejects it ('+F.reason+'); it never reaches the back-end.'; }
+  else if(F.bodyLen===B.bodyLen&&F.restLen===B.restLen){ state='SAFE';
+    msg='Both frame identically (body '+F.bodyLen+' B, leftover '+F.restLen+' B): they agree where the next request begins.';
+    if(fi===0&&bi===0) thm='no_desync_strict_strict'; }
+  else { state='DESYNC'; thm='desync_hinge';
+    msg='Front frames body '+F.bodyLen+' B (leftover '+F.restLen+' B); back frames body '+B.bodyLen+' B (leftover '+B.restLen+' B). The '+Math.abs(F.restLen-B.restLen)+'-byte gap is a <b>smuggled request</b>.'; }
+  const fd=F.dec,bd=B.dec;
+  if(fd&&bd){ const same=fd.label===bd.label;
+    msg+='<br><span class="dec">'+(same?'Both keyed on <b>'+fd.label+'</b>.':'Front end keyed on <b class="sw fe">'+fd.label+'</b>; back end keyed on <b class="sw be">'+bd.label+'</b> — the <i>selectively preferred</i> header is the hinge'+(state==='DESYNC'?' (theorem <code>desync_hinge</code>: every desync keys on different fields).':'.'))+'</span>'; }
+  renderHinge(raw,fd,bd);
+  const l=$('light'); l.className='light '+state; l.textContent=state;
+  $('pmsg').innerHTML=msg;
+  renderThm(thm);
+}
+function renderHinge(raw,fd,bd){
+  const el=$('hinge'); if(!el) return;
+  const all=framesFor(raw); const sg=all.map(sigOf); const freq={}; sg.forEach(x=>freq[x]=(freq[x]||0)+1);
+  const maj=Object.keys(freq).sort((a,b)=>freq[b]-freq[a])[0]; const diffLines=new Set(); all.forEach((r,i)=>{ if(sg[i]!==maj&&r.dec) r.dec.lines.forEach(l=>diffLines.add(l)); });
+  const hh=document.querySelector('.hingehead'); if(hh) hh.innerHTML='hinge view — <span class="sw fe">front end keyed on</span> · <span class="sw be">back end keyed on</span> · <span class="sw both">both</span> · <span class="c0" style="padding:0 6px">outlined = bytes that make a difference (a minority parser keys on them)</span>';
+  const fl=new Set(fd?fd.lines:[]), bl=new Set(bd?bd.lines:[]);
+  const parts=raw.split('\n'); let out='',inBody=false;
+  parts.forEach((line,i)=>{ const ln=i+1; const t=line.replace(/\r$/,'\u240d'); const e=t.replace(/&/g,'&amp;').replace(/</g,'&lt;');
+    if(inBody){ out+='<span class="ln">'+ln+'</span><span class="body">'+e+'</span>\n'; return; }
+    const c=((fl.has(ln)&&bl.has(ln)?'both':fl.has(ln)?'fe':bl.has(ln)?'be':'')+(diffLines.has(ln)?' c0':'')).trim();
+    out+='<span class="ln">'+ln+'</span>'+(c?'<span class="'+c+'">'+e+'</span>':e)+'\n';
+    if(t===''||t==='\u240d') inBody=true; });
+  el.innerHTML=out;
+}
+const TIMELINE=[
+ {y:'1999',what:'RFC 2616: CL and TE both defined, precedence text loose. Pre-2014 code (CL-first / last-CL columns) implements this era.',tag:'spec',cols:['cl-first','last-cl'],src:'RFC 2616 §4.4'},
+ {y:'2005',what:'Watchfire "HTTP Request Smuggling" (Linhart, Klein, Heled, Orrin): CL-vs-TE disagreement between front end and back end named and demonstrated.',tag:'fixed',cols:['cl-first','te-first'],src:'BACKGROUND.md'},
+ {y:'2014',what:'RFC 7230 §3.3.3: "Transfer-Encoding overrides Content-Length"; CL+TE "ought to be handled as an error"; obs-fold MUST reject-or-replace. The TE-first column is this sentence.',tag:'spec',cols:['te-first','obs-fold'],src:'RFC 7230'},
+ {y:'2019',what:'Kettle, "HTTP Desync Attacks — Smuggling Reborn": CL.TE / TE.CL rediscovered at scale with a timing oracle; mass fixes in CDNs and proxies.',tag:'fixed',cols:['cl-first','te-first','te-ignore'],src:'portswigger.net/research/http-desync-attacks-request-smuggling-reborn'},
+ {y:'2020–21',what:'Node llhttp CVE-2020-8201/-8287, CVE-2021-22959/-22960: lenient TE matching and chunk parsing. Fixed — but a lenient mode (insecureHTTPParser) still exists, so the divergence became opt-in.',tag:'current',cols:['bare-lf'],src:'HTTP-RECON.md'},
+ {y:'2021',what:'HAProxy CVE-2021-40346 (TE smuggling); T-Reqs grammar-based differential fuzzing; HTTP/2→1.1 downgrade desyncs (Kettle).',tag:'fixed',cols:['te-first'],src:'HTTP-RECON.md'},
+ {y:'2022',what:'RFC 9112 §6.3 (obsoletes 7230): a server MAY reject CL+TE outright and MUST close after; differing duplicate CL MUST be rejected (RFC 9110 §8.6). The strict column = every MAY taken.',tag:'spec',cols:['strict'],src:'RFC 9112 / 9110'},
+ {y:'2022',what:'Browser-powered desync (Kettle): client-side variants; same CL/TE hinge, new vantage point.',tag:'fixed',cols:['te-first','cl-first'],src:'portswigger.net/research/browser-powered-desync-attacks'},
+ {y:'2023–24',what:'HTTP Garden (Kallus, Anantharaman): differential harness over ~30 servers, dozens of CVEs (gunicorn, Apache, nginx, H2O, Node, puma, tornado…): obs-fold, chunk-ext and bare-LF classes.',tag:'fixed',cols:['obs-fold','bare-lf'],src:'github.com/narfindustries/http-garden'},
+ {y:'2025',what:'Kettle, "HTTP/1.1 Must Die": front/back pairs still desync in production — the hinge survives each individual fix because pairs are never tested together.',tag:'current',cols:['cl-first','te-first','last-cl'],src:'portswigger.net/research/http1-must-die'},
+ {y:'today',what:'Still divergent by design: bare-LF leniency (MAY), obs-fold replacement vs rejection, unknown-coding handling (SHOULD 501), TE-unaware HTTP/1.0 hops. These columns still disagree on the inputs above.',tag:'current',cols:['bare-lf','obs-fold','te-ignore'],src:'this page'},
+ {y:'2026-11-01',what:'This model: refines_no_desync — make the back end strict and no front end can desync with it; desync_hinge — every desync is two parsers keyed on different fields.',tag:'spec',cols:['strict'],src:'spec/ParserDiff'},
+];
+function renderTimeline(){
+  const el=$('timeline'); if(!el) return;
+  let h='<h3>History \u2194 current \u2014 when each column\'s behaviour was found, fixed, or is still divergent</h3><table><tr><th style="width:5em">when</th><th>what</th><th style="width:7em">status</th><th style="width:11em">columns</th></tr>';
+  TIMELINE.forEach(t=>{ h+='<tr><td>'+t.y+'</td><td>'+t.what+' <span class="kvs">['+t.src+']</span></td><td><span class="tag '+t.tag+'">'+(t.tag==='fixed'?'found \u2192 fixed':t.tag==='current'?'still divergent':'spec')+'</span></td><td class="cols">'+t.cols.map(c=>'<a href="#leg-'+c+'">'+c+'</a>').join(' ')+'</td></tr>'; });
+  h+='</table><div class="foot">Sources: ../BACKGROUND.md, ../HTTP-RECON.md (CVE table). "found \u2192 fixed" = the named implementations were patched; "still divergent" = behaviour that remains legitimately different across live servers today, i.e. the inputs above still split real deployments. Dates/claims about RFC wording are from the spec text; CVE lines from HTTP-RECON.md.</div>';
+  el.innerHTML=h;
+}
+function renderLegend(){
+  const el=$('legend'); if(!el) return;
+  let h='<h3>Column definitions — what each profile keys on, with the critical bytes highlighted</h3>';
+  PROFILES.forEach(p=>{
+    const lines=p.ex?p.ex.raw.split('\n'):[];
+    const ex=lines.map((l,i)=>{const t=l.replace(/\r$/,'\u240d').replace(/&/g,'&amp;').replace(/</g,'&lt;');return (p.ex.hi.includes(i+1)?'<span class="crit">'+t+'</span>':t);}).join('\n');
+    h+='<details id="leg-'+p.id+'"><summary>'+p.name+' <span class="kvs">— '+(p.rule||'')+' · '+p.servers+'</span></summary><div class="def">'+(p.def||'')+'</div>'+(p.ex?'<pre class="ex">'+ex+'</pre><div class="note">'+p.ex.note+'</div>':'')+'</details>';
+  });
+  h+='<details id="leg-lean"><summary>Lean reference <span class="kvs">— strict RFC 9112 §6.3 as a proven model</span></summary><div class="def">The column driven by <code>spec</code>: <code>frame strict m</code>. It rejects anything the RFC lets you reject, so it is the bottom of the refinement order (<code>strict_bottom</code>) and the only profile that refines strict is strict itself (<code>refines_strict_iff</code>). Its "keyed on" cell is <code>decisive strict m</code>; the RFC row quotes the sentence that decided.</div></details>';
+  el.innerHTML=h;
+}
+function renderThm(active){
+  const T=[
+   {name:'no_desync_strict_strict',
+    code:'/-- **Theorem (2).** Two strict parsers never desync. -/\ntheorem no_desync_strict_strict : \u2200 m, \u00ac desync strict strict m := by\n  rintro m \u27e8hne, -, -\u27e9\n  exact hne rfl',
+    ax:'#print axioms no_desync_strict_strict   -- run: cd spec && lake env lean ...'},
+   {name:'backend_strict_safe',
+    code:'/-- **Make the back end strict and smuggling is impossible**, for *any*\n    front end. -/\ntheorem backend_strict_safe : \u2200 (F : Profile) (m : Msg), \u00ac desync F strict m :=\n  fun F m => (refines_no_desync strict F (strict_bottom F) m).1',
+    ax:'#print axioms backend_strict_safe       -- (see spec/ParserDiff/Theorems.lean)'},
+   {name:'desync_hinge',
+    code:'/-- **The hinge theorem** (exhaustive over the 168-message space): if F and B desync on m,\n    they keyed their decision on *different* fields. -/\ntheorem desync_hinge :\n    (space.all fun m => Profile.all.all fun F => Profile.all.all fun B =>\n      !desyncB F B m || decide (decisive F m \u2260 decisive B m)) = true := by\n  decide +kernel',
+    ax:'#print axioms desync_hinge   -- propext, Classical.choice, Quot.sound   (spec/ParserDiff/Hinge.lean)'},
+  ];
+  let h='<h3>Theorem on screen \u2014 verbatim from <code>spec/ParserDiff/Theorems.lean</code> '+(window.__leanReal?'<span class="badge proven">model file loaded</span>':'<span class="badge proven">spec present</span>')+'</h3>';
+  T.forEach(t=>{ h+='<pre class="lean'+(active===t.name?' active':'')+'">'+t.code+'\n\n<span class="axioms">'+t.ax+'</span></pre>'; });
+  $('thmbox').innerHTML=h;
+}
+function renderModelLine(){
+  const m=$('modelline');
+  const lean=FIXTURES&&/^lean/i.test(FIXTURES.generator||'');
+  const cc=lean?crossCheck(curRaw()):null;
+  if(lean){
+    let v=cc?(' \u2014 boundary cross-check vs proven model: <b>'+cc.ok+'/'+cc.tot+'</b> of columns {'+cc.ids.join(', ')+'} agree on this input'):'';
+    m.innerHTML='<span class="badge proven">proven model loaded</span> '+FIXTURES.generator+' (fixtures/framings.json)'+v+'. Interactive table = JS model; the 4 Lean-proven columns match it at the boundary.';
+  } else if(FIXTURES){
+    m.innerHTML='<span class="badge">fixtures: '+(FIXTURES.generator||'?')+' (sample)</span> \u2014 regenerate from Lean: <code>python3 pd_to_fixtures.py</code> (runs spec exe <code>pd</code>).';
+  } else {
+    m.innerHTML='<span class="badge">model: built-in JS</span> \u2014 the Lean exe <code>pd</code> mirrors the framing core. Hook: <code>python3 pd_to_fixtures.py</code>.';
+  }
+}
+let _t=null; function renderAll(){ renderTable(); renderPicker(); renderModelLine(); }
+function renderDebounced(){ clearTimeout(_t); _t=setTimeout(renderAll,120); }
+/* theme */
+(function(){const k='pd-theme';const btns=[...document.querySelectorAll('#theme button')];
+ function apply(t){ if(t==='system') document.documentElement.removeAttribute('data-theme'); else document.documentElement.setAttribute('data-theme',t);
+   btns.forEach(b=>b.classList.toggle('on',b.dataset.t===t)); try{localStorage.setItem(k,t)}catch(e){} }
+ let t='system'; try{t=localStorage.getItem(k)||'system'}catch(e){} apply(t);
+ btns.forEach(b=>b.onclick=()=>apply(b.dataset.t)); })();
+renderLegend(); renderTimeline();
+(function(){const k='pd-view';const btns=[...document.querySelectorAll('#view button')];
+ function apply(v){document.body.classList.toggle('detail',v==='detail');btns.forEach(b=>b.classList.toggle('on',b.dataset.v===v));try{localStorage.setItem(k,v)}catch(e){}}
+ let v='compact';try{v=localStorage.getItem(k)||'compact'}catch(e){} apply(v); btns.forEach(b=>b.onclick=()=>apply(b.dataset.v));})();
+
+/* ---------- wiring ---------- */
+$('editor').addEventListener('input',renderDebounced);
+$('prev').onclick=()=>{scene=(scene-1+INPUTS.length)%INPUTS.length;loadScene();};
+$('next').onclick=()=>{scene=(scene+1)%INPUTS.length;loadScene();};
+document.addEventListener('keydown',e=>{
+  if(document.activeElement&&document.activeElement.tagName==='TEXTAREA') return;
+  if(e.key==='ArrowLeft'){scene=(scene-1+INPUTS.length)%INPUTS.length;loadScene();}
+  if(e.key==='ArrowRight'){scene=(scene+1)%INPUTS.length;loadScene();}
+});
+
+/* explainer skip + localStorage */
+(function(){
+  const KEY='pd_skip_explainer';
+  if(localStorage.getItem(KEY)==='1') $('explain').style.display='none';
+  $('skipBtn').onclick=()=>{ $('explain').style.display='none'; localStorage.setItem(KEY,'1'); };
+})();
+
+/* embed mode */
+if(new URLSearchParams(location.search).get('embed')==='1') document.body.classList.add('embed');
+
+buildPresets();
+renderThm(null);
+loadScene();
+loadFixtures();
+</script>
+</body>
+</html>
+

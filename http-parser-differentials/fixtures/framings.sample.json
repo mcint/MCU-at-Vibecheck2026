@@ -1,0 +1,22 @@
+{
+  "generator": "lean-pd@0.1 (example only)",
+  "schema": "pd-framings/v1",
+  "note": "Minimal example of the schema the Lean exe `pd` should print. See README.md. Replace framings.json (not this file) to drive the page.",
+  "profiles": ["strict", "te-first", "cl-first", "last-cl", "te-ignore", "obs-fold", "bare-lf"],
+  "inputs": [
+    {
+      "id": "cl_te",
+      "raw": "POST /search HTTP/1.1\r\nHost: demo\r\nContent-Length: 6\r\nTransfer-Encoding: chunked\r\n\r\n0\r\n\r\nG",
+      "profiles": {
+        "strict":    {"reject": true,  "reason": "both Content-Length and Transfer-Encoding", "method": null, "bodyLen": null, "restLen": null},
+        "te-first":  {"reject": false, "reason": null, "method": "chunked", "bodyLen": 0, "restLen": 1},
+        "cl-first":  {"reject": false, "reason": null, "method": "CL(6)",   "bodyLen": 6, "restLen": 0},
+        "last-cl":   {"reject": false, "reason": null, "method": "CL(6)",   "bodyLen": 6, "restLen": 0},
+        "te-ignore": {"reject": false, "reason": null, "method": "CL(6)",   "bodyLen": 6, "restLen": 0},
+        "obs-fold":  {"reject": false, "reason": null, "method": "chunked", "bodyLen": 0, "restLen": 1},
+        "bare-lf":   {"reject": false, "reason": null, "method": "chunked", "bodyLen": 0, "restLen": 1}
+      }
+    }
+  ]
+}
+

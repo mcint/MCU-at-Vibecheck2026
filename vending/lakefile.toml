@@ -1,0 +1,27 @@
+name = "workflow_game"
+version = "0.1.0"
+defaultTargets = ["vending_game", "order_game"]
+
+[[lean_lib]]
+name = "Chess"
+
+[[lean_lib]]
+name = "OrderGame"
+
+[[lean_lib]]
+name = "VendingGame"
+
+[[lean_lib]]
+name = "RushGame"
+
+[[lean_exe]]
+name = "chess"
+root = "Main"
+
+[[lean_exe]]
+name = "order_game"
+root = "OrderGameMain"
+
+[[lean_exe]]
+name = "vending_game"
+root = "VendingGameMain"

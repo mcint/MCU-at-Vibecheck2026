@@ -1,0 +1,484 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>abc / abc-1 — click to double, the others drop</title>
+<style>
+:root{--bg:#fafafa;--fg:#1a1a1a;--mut:#666;--line:#ddd;--acc:#0b5fff;--a:#d62728;--b:#2ca02c;--c:#1f77b4;--p:#9467bd;--ok:#0a7a3a;--bad:#b00020;--card:#fff}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--bg);color:var(--fg);font:15px/1.45 -apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif}
+body{display:flex;flex-direction:column;min-height:100vh}
+header{display:flex;align-items:center;gap:12px;padding:8px 14px;border-bottom:1px solid var(--line);background:var(--card)}
+header h1{font-size:17px;margin:0;font-weight:600}
+header .sub{color:var(--mut);font-size:13px}
+.spacer{flex:1}
+a{color:var(--acc)}
+.embed header{display:none}
+.embed #standalone-embed{display:block}
+#standalone-embed{display:none;position:fixed;top:6px;right:10px;font-size:12px;z-index:9;background:var(--card);padding:2px 8px;border:1px solid var(--line);border-radius:6px}
+#explainer{margin:10px 14px 0;padding:10px 14px;border:1px solid #cfe0ff;background:#eef4ff;border-radius:8px;font-size:14px;position:relative}
+#explainer b{color:#083a9c}
+#explainer .skip{position:absolute;top:8px;right:10px;font-size:12px;padding:3px 9px;border:1px solid #9bb8ff;background:#fff;border-radius:5px;cursor:pointer}
+#explainer.hidden{display:none}
+#show-explainer{display:none;margin:6px 14px 0;font-size:12px;color:var(--mut);background:none;border:none;cursor:pointer;text-align:left;padding:0}
+#show-explainer.vis{display:inline-block}
+nav.steps{display:flex;gap:4px;padding:8px 14px 0;flex-wrap:wrap;align-items:center}
+nav.steps button{font:inherit;font-size:13px;padding:4px 10px;border:1px solid var(--line);background:var(--card);border-radius:6px;cursor:pointer}
+nav.steps button.on{background:var(--acc);color:#fff;border-color:var(--acc)}
+nav.steps .arrows{margin-left:auto;display:flex;gap:4px}
+nav.steps .arrows button{min-width:36px}
+main{flex:1;padding:8px 14px 14px}
+.scene{display:none}.scene.on{display:block}
+.caption{font-size:15px;margin:2px 0 10px;color:#333}
+.caption b{color:#000}
+kbd{font-family:ui-monospace,Menlo,monospace;font-size:12px;border:1px solid #bbb;border-bottom-width:2px;border-radius:4px;padding:0 5px;background:#fff}
+.row{display:flex;gap:14px;flex-wrap:wrap;align-items:flex-start}
+.card{background:var(--card);border:1px solid var(--line);border-radius:8px;padding:10px 12px}
+.card h3{margin:0 0 6px;font-size:14px;font-weight:600;color:#333}
+.bars{display:flex;gap:18px;align-items:flex-end;height:190px;padding:6px 10px 0;border-bottom:1px solid var(--line)}
+.bar{width:64px;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:100%;position:relative;cursor:pointer}
+.bar .fill{width:100%;border-radius:4px 4px 0 0;transition:height .18s}
+.bar .val{font-family:ui-monospace,Menlo,monospace;font-size:14px;margin-bottom:3px}
+.bar .key{position:absolute;bottom:-22px;font-weight:600}
+.bar.neg .fill{border-radius:0 0 4px 4px}
+.ctl{display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-top:26px}
+.ctl button,.btn{font:inherit;font-size:13px;padding:5px 11px;border:1px solid var(--line);background:var(--card);border-radius:6px;cursor:pointer}
+.ctl button:hover,.btn:hover{border-color:var(--acc)}
+.ctl button.k{font-weight:700;min-width:36px}
+.ctl button.ka{color:var(--a)}.ctl button.kb{color:var(--b)}.ctl button.kc{color:var(--c)}
+.status{font-family:ui-monospace,Menlo,monospace;font-size:13px;margin-top:8px;white-space:pre-wrap}
+.status .dead{color:var(--bad);font-weight:700}.status .sink{color:#a05a00;font-weight:700}.status .alive{color:var(--ok);font-weight:700}
+.thm{background:#111;color:#e6e6e6;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12.5px;padding:10px 12px;border-radius:8px;white-space:pre-wrap;overflow:auto;margin:6px 0 0;line-height:1.4}
+.thm .k{color:#c792ea}.thm .n{color:#82aaff}.thm .c{color:#8a8a8a}.thm .ax{color:#c3e88d}
+.thm .file{color:#ffcb6b;font-size:11.5px;display:block;margin-bottom:4px}
+.badge{display:inline-block;font-size:11px;padding:1px 7px;border-radius:10px;background:#e8f5e9;color:var(--ok);border:1px solid #bfe3c4;margin-left:6px;vertical-align:middle}
+.badge.warn{background:#fff6e5;color:#8a5a00;border-color:#f3d9a0}
+svg.plot{background:#fff;border:1px solid var(--line);border-radius:6px;max-width:100%}
+img.plot{max-width:100%;height:auto;border:1px solid var(--line);border-radius:6px;background:#fff}
+table{border-collapse:collapse;font-size:13.5px;width:100%}
+td,th{border-bottom:1px solid var(--line);padding:5px 8px;text-align:left;vertical-align:top}
+th{background:#f3f3f3;font-weight:600}
+code{font-family:ui-monospace,Menlo,monospace;font-size:12.5px;background:#f0f0f0;padding:0 4px;border-radius:3px}
+.thm code{background:none;color:inherit}
+.small{font-size:12.5px;color:var(--mut)}
+.note{font-size:13px;color:#444;margin-top:8px}
+.pick button.on{background:#eef4ff;border-color:var(--acc)}
+.result{font-weight:600}
+footer{padding:6px 14px;border-top:1px solid var(--line);font-size:12px;color:var(--mut);background:var(--card)}
+details.thms summary{cursor:pointer;font-size:13px;color:#333;margin-top:8px}
+</style></head>
+<body>
+<header>
+  <h1>abc / abc-1</h1><span class="sub">click one number to double it; the other two drop by 1 — Lean 4, zero <code>sorry</code>, no <code>native_decide</code></span>
+  <span class="spacer"></span>
+  <a id="standalone" href="index.html" target="_blank" rel="noopener">open standalone ↗</a>
+</header>
+<a id="standalone-embed" href="index.html" target="_blank" rel="noopener">open standalone ↗</a>
+<div id="explainer">
+  <button class="skip" id="skip">skip ✕</button><a href="../plots/index.html" target="_blank" style="position:absolute;top:8px;right:90px;font-size:12px">all plots ↗</a>
+  <b>What you're looking at.</b> A tiny game: three numbers; each turn you click one — it doubles, the other two lose 1. In <b>abc</b> values floor at 0 (and 0·2=0, so a zero is forever); in <b>abc-1</b> there is no floor and negatives double <i>downward</i>.
+  <b>What's proven</b> (Lean 4, kernel-checked): start (2,2,2) is dead in 2 moves for <i>every</i> play; (3,3,3) can live forever but min never exceeds 3 for <i>any play of any length</i>; (4,4,4) grows without bound. For the <i>product</i> objective, balance is exactly optimal in abc, but in abc-1 pressing <b>one key forever</b> is optimal <i>for every horizon N</i> — the sign trick.
+  <b>How to attack it:</b> play the bars (keys <kbd>a</kbd> <kbd>b</kbd> <kbd>c</kbd>, <kbd>u</kbd> undo) and try to beat each bound. The theorem statements shown are copied verbatim from the <code>.lean</code> files; the JS only re-implements <code>step</code> for interactivity — the proofs are about <code>Abc.lean</code>, not this page.
+</div>
+<button id="show-explainer">▸ show quick-read</button>
+
+<nav class="steps" id="nav"></nav>
+<main id="main">
+
+<!-- ================= Scene 1 ================= -->
+<section class="scene" data-title="0 · rules &amp; baselines">
+<p class="caption"><b>The system in four lines, then what naive play gets — the floor Lean lifts our confidence above.</b></p>
+<div class="row">
+  <div class="card" style="flex:1 1 300px">
+    <h3>Rules (the whole game)</h3>
+    <ol style="margin:0;padding-left:1.2em">
+      <li>Three integers <code>a b c</code>. One move per turn: pick one.</li>
+      <li>The picked value <b>doubles</b>; the other two <b>drop by 1</b>.</li>
+      <li><b>abc</b>: values floor at 0 (and 0·2 = 0, so a zero is forever).<br><b>abc-1</b>: no floor; a negative doubles downward.</li>
+      <li>Score after N turns: <b>min</b> (keep the weakest alive) or <b>product</b> a·b·c.</li>
+    </ol>
+    <p style="margin:.6em 0 0;font-size:12.5px;color:#555">That is all of <code>step</code>; everything proven is about exactly this function.</p>
+  </div>
+  <div class="card" style="flex:2 1 460px">
+    <h3>Naive strategies vs the proven ceiling</h3>
+    <table>
+      <tr><th>setting</th><th>spam one key</th><th>round-robin</th><th>greedy-smallest</th><th>greedy-largest</th><th><b>proven ceiling</b></th></tr>
+      <tr><td>abc · (4,4,4) · N=9 · min</td><td>0</td><td>4</td><td><b>10</b></td><td>0</td><td><b>10</b> <code>bestFrom</code>+<code>le_bestFrom</code></td></tr>
+      <tr><td>abc · (4,4,4) · N=6 · product</td><td>0</td><td>280</td><td><b>336</b></td><td>0</td><td><b>336</b> = 6·7·8 <code>prodPar6_sat_bound</code></td></tr>
+      <tr><td>abc-1 · (1,1,1) · N=9 · product</td><td><b>32768</b></td><td>−1560</td><td>−5376</td><td><b>32768</b></td><td><b>32768</b> = 2⁹·8² <code>spam_optimal</code> (∀ N)</td></tr>
+    </table>
+    <p style="margin:.6em 0 0;font-size:12.5px;color:#555">Numbers computed by running each strategy through the Lean <code>step</code> (<code>tmp/baselines.lean</code>).
+    Read it two ways: in <b>abc</b> a one-line heuristic (click the smallest) already hits 10 and 336 — the proof is what tells you <i>there is nothing above it</i>.
+    In <b>abc-1</b> the same heuristic goes negative and the dumbest strategy is optimal — the proof is what tells you <i>why</i> (sign parity + a box invariant).</p>
+  </div>
+</div>
+</section>
+<section class="scene" data-title="1 · rules">
+<p class="caption"><b>Rules.</b> Click a bar (or press <kbd>a</kbd>/<kbd>b</kbd>/<kbd>c</kbd>): it doubles, the others −1. Toggle the variant to see the floor at 0 (abc) vs. negatives doubling down (abc-1).</p>
+<div class="row">
+  <div class="card" style="flex:0 0 330px">
+    <h3>Playable widget</h3>
+    <div class="bars" id="w1-bars"></div>
+    <div class="ctl">
+      <button class="k ka" data-w="w1" data-act="A">a</button>
+      <button class="k kb" data-w="w1" data-act="B">b</button>
+      <button class="k kc" data-w="w1" data-act="C">c</button>
+      <button data-w="w1" data-cmd="undo">undo (u)</button>
+      <button data-w="w1" data-cmd="reset">reset (r)</button>
+      <button data-w="w1" data-cmd="var">variant: <span id="w1-vlabel">abc</span></button>
+    </div>
+    <div class="status" id="w1-status"></div>
+    <div class="ctl" style="margin-top:6px"><span class="small">start:</span>
+      <button data-w="w1" data-start="1,0,5">(1,0,5)</button>
+      <button data-w="w1" data-start="0,-1,5">(0,−1,5)</button>
+      <button data-w="w1" data-start="4,4,4">(4,4,4)</button>
+    </div>
+  </div>
+  <div class="card" style="flex:1;min-width:380px">
+    <h3>The one <code>step</code> both variants share <span class="badge">verbatim from Abc.lean</span></h3>
+<pre class="thm"><span class="file">Abc.lean</span><span class="k">inductive</span> Variant | sat | nosat
+
+<span class="c">/-- saturation: `abc` clamps at 0, `abc-1` doesn't. -/</span>
+<span class="k">def</span> <span class="n">clamp</span> : Variant → Int → Int
+  | .sat,   x => max 0 x
+  | .nosat, x => x
+
+<span class="k">def</span> <span class="n">step</span> (v : Variant) (s : St) : Act → St
+  | .A => ⟨clamp v (2 * s.a), clamp v (s.b - 1), clamp v (s.c - 1)⟩
+  | .B => ⟨clamp v (s.a - 1), clamp v (2 * s.b), clamp v (s.c - 1)⟩
+  | .C => ⟨clamp v (s.a - 1), clamp v (s.b - 1), clamp v (2 * s.c)⟩
+
+<span class="k">def</span> <span class="n">score</span> (s : St) : Int := min s.a (min s.b s.c)
+
+<span class="c">/-- If all three values are ≥ 1 before a move, saturation never triggers: both variants agree. -/</span>
+<span class="k">theorem</span> <span class="n">step_agree</span> (s : St) (h : alive s = true) (act : Act) : step .sat s act = step .nosat s act
+<span class="ax">'Abc.step_agree' depends on axioms: [propext, Classical.choice, Quot.sound]</span></pre>
+    <p class="note">Try (1,0,5) in abc: press <kbd>b</kbd> → (0,0,4): the zero stays zero (<code>zero_forever</code>). Switch to abc-1 and start (0,−1,5): press <kbd>b</kbd> → (−1,−2,4): a negative doubles <i>down</i>. Both are literally <code>#guard</code> lines in Tests.lean.</p>
+    <p class="small">⚠ The JS on this page re-implements <code>step</code> only so you can click. Nothing is proven by the browser; every theorem quoted is checked by the Lean kernel about <code>Abc.lean</code>, <code>Optimal.lean</code>, <code>Perturb.lean</code>.</p>
+  </div>
+</div>
+</section>
+
+<!-- ================= Scene 2 ================= -->
+<section class="scene" data-title="2 · the ladder 2→3→4">
+<p class="caption"><b>The ladder.</b> Pick a symmetric start and try to keep all three alive and growing. <b>2</b> dies in two moves; <b>3</b> can live forever but is capped at 3; <b>4</b> is the sky. Objective: <code>score = min a b c</code>, variant abc.</p>
+<div class="row">
+  <div class="card" style="flex:0 0 330px">
+    <h3>Play from… <span class="pick" id="w2-pick">
+      <button data-w="w2" data-start="2,2,2">(2,2,2)</button>
+      <button data-w="w2" data-start="3,3,3" class="on">(3,3,3)</button>
+      <button data-w="w2" data-start="4,4,4">(4,4,4)</button></span></h3>
+    <div class="bars" id="w2-bars"></div>
+    <div class="ctl">
+      <button class="k ka" data-w="w2" data-act="A">a</button>
+      <button class="k kb" data-w="w2" data-act="B">b</button>
+      <button class="k kc" data-w="w2" data-act="C">c</button>
+      <button data-w="w2" data-cmd="undo">undo (u)</button>
+      <button data-w="w2" data-cmd="reset">reset (r)</button>
+    </div>
+    <div class="status" id="w2-status"></div>
+    <div class="ctl" style="margin-top:6px"><span class="small">auto-play:</span>
+      <button data-w="w2" data-play="abc cba cba cba">3-cycle (survive3)</button>
+      <button data-w="w2" data-play="cbaabcacb">grow ×1</button>
+      <button data-w="w2" data-play="cbaabcacbcbaabcacbcbaabcacb">grow ×3</button>
+    </div>
+  </div>
+  <div class="card" style="flex:1;min-width:380px">
+    <h3>Live trajectory (symlog axis: sign·log₂(1+|x|)) — best min so far: <span id="w2-best" class="result">–</span></h3>
+    <svg class="plot" id="w2-plot" width="560" height="230" viewBox="0 0 560 230"></svg>
+    <div id="w2-thm"></div>
+  </div>
+</div>
+<details class="thms"><summary>Static plots generated from the proven <code>step</code> via <code>lake exe abc traj</code> (plots/)</summary>
+<div class="row" style="margin-top:6px">
+  <img class="plot" src="../plots/doomed.svg" alt="doomed (2,2,2)" style="width:360px">
+  <img class="plot" src="../plots/trapped.svg" alt="trapped (3,3,3)" style="width:360px">
+  <img class="plot" src="../plots/grow.svg" alt="grow (4,4,4)" style="width:360px">
+</div></details>
+</section>
+
+<!-- ================= Scene 3 ================= -->
+<section class="scene" data-title="3 · product in abc: balance wins">
+<p class="caption"><b>Product objective in abc</b> (floor at 0). Steward's heuristic: <i>x² = (x+c)(x−c)+c²</i>, keep factors balanced. Proven as algebra, and proven exactly optimal for 6 turns from (4,4,4): best product 336 = 6·7·8. Try to beat it.</p>
+<div class="row">
+  <div class="card" style="flex:0 0 330px">
+    <h3>abc from (4,4,4), 6 turns — maximise a·b·c</h3>
+    <div class="bars" id="w3-bars"></div>
+    <div class="ctl">
+      <button class="k ka" data-w="w3" data-act="A">a</button>
+      <button class="k kb" data-w="w3" data-act="B">b</button>
+      <button class="k kc" data-w="w3" data-act="C">c</button>
+      <button data-w="w3" data-cmd="undo">undo (u)</button>
+      <button data-w="w3" data-cmd="reset">reset (r)</button>
+    </div>
+    <div class="status" id="w3-status"></div>
+    <div class="ctl" style="margin-top:6px"><span class="small">auto-play:</span>
+      <button data-w="w3" data-play="cbaabc">balanced <code>cbaabc</code></button>
+      <button data-w="w3" data-play="aaaaaa">spam <code>aaaaaa</code></button>
+    </div>
+    <div id="w3-verdict" class="note"></div>
+  </div>
+  <div class="card" style="flex:1;min-width:380px">
+    <h3>Theorems <span class="badge">verbatim from Abc.lean</span></h3>
+<pre class="thm"><span class="file">Abc.lean</span><span class="c">/-- x² = (x+c)(x−c) + c²: spreading two equal factors apart loses c². -/</span>
+<span class="k">theorem</span> <span class="n">spread_loses</span> (x c : Int) : (x + c) * (x - c) + c * c = x * x := by grind
+<span class="c">/-- Three in a row lose to three equal: (x−1)·x·(x+1) = x³ − x &lt; x³ for x ≥ 1. -/</span>
+<span class="k">theorem</span> <span class="n">cube_balance</span> (x : Int) (h : 1 ≤ x) : (x - 1) * x * (x + 1) &lt; x * x * x := by grind
+<span class="ax">'Abc.cube_balance' depends on axioms: [propext, Classical.choice, Quot.sound]</span>
+
+<span class="k">theorem</span> <span class="n">prodPar6_sat</span> : bestProd .sat s4 6 = 336 := by decide
+<span class="k">theorem</span> <span class="n">prodPar6_sat_tight</span> : runFrom .sat s4 [.C,.B,.A,.A,.B,.C] = ⟨6,7,8⟩ := by decide
+<span class="k">theorem</span> <span class="n">prodPar6_sat_bound</span> : ∀ p : List Act, p.length = 6 → prod (runFrom .sat s4 p) ≤ 336 := by
+  intro p h; have := le_bestProd .sat p s4; rw [h, prodPar6_sat] at this; exact this
+<span class="ax">'Abc.prodPar6_sat_bound' depends on axioms: [propext, Classical.choice, Quot.sound]</span></pre>
+    <p class="note">Why balance holds here: all three must stay ≥ 1, and the only trade is additive (−1 here, +x there) — AM–GM territory. The exact DP continues the pattern to N=12: (18,19,20), consecutive = as balanced as parity allows (plot below; DP beyond N=6 is <i>not</i> a theorem).</p>
+    <details class="thms"><summary>plots/prod-balanced.svg</summary><img class="plot" src="../plots/prod-balanced.svg" alt="prod-balanced" style="width:100%;max-width:560px"></details>
+  </div>
+</div>
+</section>
+
+<!-- ================= Scene 4 ================= -->
+<section class="scene" data-title="4 · abc-1: the sign trick">
+<p class="caption"><b>abc-1, product, from (1,1,1).</b> Your heuristic says "balance" — so play the split (double a, then b, then c). Then spam one key. Two negatives make a positive product, and the −1 drag is <i>free magnitude</i> for the two you ignore. Spam is optimal for <b>every</b> N ≥ 2.</p>
+<div class="row">
+  <div class="card" style="flex:0 0 330px">
+    <h3>abc-1 from (1,1,1), N = <input id="w4-N" type="number" min="2" max="40" value="9" style="width:52px;font:inherit"> turns — maximise a·b·c</h3>
+    <div class="bars" id="w4-bars"></div>
+    <div class="ctl">
+      <button class="k ka" data-w="w4" data-act="A">a</button>
+      <button class="k kb" data-w="w4" data-act="B">b</button>
+      <button class="k kc" data-w="w4" data-act="C">c</button>
+      <button data-w="w4" data-cmd="undo">undo (u)</button>
+      <button data-w="w4" data-cmd="reset">reset (r)</button>
+    </div>
+    <div class="status" id="w4-status"></div>
+    <div class="ctl" style="margin-top:6px"><span class="small">auto-play:</span>
+      <button data-w="w4" data-playfn="split">split a…b…c</button>
+      <button data-w="w4" data-playfn="spam">spam a</button>
+      <button data-w="w4" data-playfn="rot">rotate abc…</button>
+    </div>
+    <div id="w4-verdict" class="note"></div>
+  </div>
+  <div class="card" style="flex:1;min-width:380px">
+    <h3>Live trajectory (symlog) — product dashed · <span class="small">bound 2^N·(N−1)² = <span id="w4-bound">–</span></span></h3>
+    <svg class="plot" id="w4-plot" width="560" height="200" viewBox="0 0 560 200"></svg>
+    <div id="w4-thm"></div>
+  </div>
+</div>
+<details class="thms"><summary>Static N=35 witnesses from plots/ (<code>spam_beats_split</code>: spam 2³⁵·34² ≈ 3.97e13 vs split (4073, −22540, −90112) ≈ 8.27e12, 4.8× worse — by <code>decide</code>, no axioms)</summary>
+<div class="row" style="margin-top:6px">
+  <img class="plot" src="../plots/prod-spam35.svg" alt="spam N=35" style="width:49%">
+  <img class="plot" src="../plots/prod-split35.svg" alt="split N=35" style="width:49%">
+</div></details>
+</section>
+
+<!-- ================= Scene 5 ================= -->
+<section class="scene" data-title="5 · perturbations">
+<p class="caption"><b>Perturbations.</b> What survives when the problem is tweaked? Monotone rescoring: same answer (one line). Even dimension: <b>spam fails</b> — one negative means product ≤ 0. The 3D theorem rests on sign parity.</p>
+<div class="row">
+<div class="card" style="flex:1;min-width:420px">
+<table>
+<tr><th>perturbation</th><th>result</th><th>status</th></tr>
+<tr><td>monotone rescoring f(a·b·c) — √, log</td><td>same optimum</td><td><code>spam_optimal_mono</code> <span class="badge">Lean</span></td></tr>
+<tr><td>per-coordinate log, summed (abc)</td><td>= log product → balanced rotation</td><td>DP only <span class="badge warn">not formalized</span></td></tr>
+<tr><td>per-coordinate √, summed (abc)</td><td><b>flips to spam</b> (0,0,256)</td><td>DP only <span class="badge warn">not formalized</span></td></tr>
+<tr><td>sum a+b+c (abc)</td><td>spam, 256 at N=6</td><td><code>sumPar6</code> by decide <span class="badge">Lean</span></td></tr>
+<tr><td>1 number</td><td>spam, 2^N</td><td>trivial</td></tr>
+<tr><td><b>2 numbers</b> (abc-1)</td><td><b>spam fails</b>: one negative ⇒ product ≤ 0. Optimum dips first: <code>bb a⁶</code> → (−64,−2) = 128 at N=8</td><td><code>spam2_nonpos</code> (all N), <code>par2_8_bound</code> <span class="badge">Lean</span></td></tr>
+<tr><td><b>4 numbers</b> (abc-1)</td><td>spam fails (3 negatives); optimum <code>dc b^(N−2)</code>, all four negative</td><td>DP only <span class="badge warn">not formalized</span></td></tr>
+<tr><td>drag −2, −3; doubling ×3</td><td>spam, robustly</td><td>DP only <span class="badge warn">not formalized</span></td></tr>
+</table>
+<p class="note">Reading: with an <b>odd</b> number of coordinates, spam leaves an even number of negatives and the untouched negatives are free magnitude. <b>Even</b> dimension forces a dip, the box invariant stops being tight (<code>box_loose_2d</code>: 128 ≪ 2304), and a proof would need an <i>order</i> argument. The smaller problem is the harder theorem.</p>
+</div>
+<div class="card" style="flex:1;min-width:380px">
+<h3>2-number toy (abc-1, <code>step2</code> from Perturb.lean): spam vs dip, N=8</h3>
+<div class="ctl" style="margin-top:0">
+  <button class="k ka" data-w="w5" data-act="A">a</button>
+  <button class="k kb" data-w="w5" data-act="B">b</button>
+  <button data-w="w5" data-cmd="undo">undo</button>
+  <button data-w="w5" data-cmd="reset">reset</button>
+  <button data-w="w5" data-play="aaaaaaaa">spam</button>
+  <button data-w="w5" data-play="bbaaaaaa">dip <code>bb a⁶</code></button>
+</div>
+<div class="status" id="w5-status"></div>
+<pre class="thm"><span class="file">Perturb.lean</span><span class="k">theorem</span> <span class="n">spam2_nonpos</span> (n : Nat) (hn : 1 ≤ n) : prod2 (run2 o2 (List.replicate n .A)) ≤ 0
+<span class="ax">'Abc.spam2_nonpos' depends on axioms: [propext, Classical.choice, Quot.sound]</span>
+
+<span class="k">theorem</span> <span class="n">par2_8_bound</span> : ∀ p : List Act2, p.length = 8 → prod2 (run2 o2 p) ≤ 128
+<span class="ax">'Abc.par2_8_bound' depends on axioms: [propext, Classical.choice, Quot.sound]</span>
+
+<span class="k">theorem</span> <span class="n">spam_optimal_mono</span> (f : Int → Int) (hf : ∀ x y, x ≤ y → f x ≤ f y)
+    (p : List Act) (hN : 2 ≤ p.length) :
+    f (prod (runFrom .nosat s1 p)) ≤ f (prod (runFrom .nosat s1 (List.replicate p.length .A))) := by
+  rw [spam_attains]; exact hf _ _ (spam_optimal p hN)</pre>
+</div>
+</div>
+</section>
+</main>
+<footer>Proofs: <code>Abc.lean</code>, <code>Optimal.lean</code>, <code>Perturb.lean</code> · <code>lake build && ./test.sh</code> · axioms used anywhere: only <code>propext</code>, <code>Classical.choice</code>, <code>Quot.sound</code> (per-theorem <code>#print axioms</code> lines shown verbatim). Keys: ← → scenes · a b c play · u undo · r reset.</footer>
+
+<script>
+(function(){
+'use strict';
+// ---------- embed / explainer ----------
+var q=new URLSearchParams(location.search);
+if(q.get('embed')==='1'){document.body.classList.add('embed');}
+var fname=location.pathname.split('/').pop()||'index.html';
+document.getElementById('standalone').href=fname;document.getElementById('standalone-embed').href=fname;
+var ex=document.getElementById('explainer'),showEx=document.getElementById('show-explainer');
+function setEx(hide){ex.classList.toggle('hidden',hide);showEx.classList.toggle('vis',hide);try{localStorage.setItem('abc-demo-skip',hide?'1':'0')}catch(e){}}
+try{if(localStorage.getItem('abc-demo-skip')==='1')setEx(true)}catch(e){}
+document.getElementById('skip').onclick=function(){setEx(true)};
+showEx.onclick=function(){setEx(false)};
+
+// ---------- the rules, re-implemented ONLY for interactivity (the proofs are about Abc.lean) ----------
+function clamp(v,x){return v==='sat'?Math.max(0,x):x}
+function step(v,s,act){ // mirrors Abc.step line for line
+  if(act==='A')return [clamp(v,2*s[0]),clamp(v,s[1]-1),clamp(v,s[2]-1)];
+  if(act==='B')return [clamp(v,s[0]-1),clamp(v,2*s[1]),clamp(v,s[2]-1)];
+  return [clamp(v,s[0]-1),clamp(v,s[1]-1),clamp(v,2*s[2])];
+}
+function step2(s,act){return act==='A'?[2*s[0],s[1]-1]:[s[0]-1,2*s[1]]} // Perturb.step2
+function score(s){return Math.min.apply(null,s)}
+function alive(s){return s.every(function(x){return x>=1})}
+function prod(s){return s.reduce(function(a,b){return a*b},1)}
+function symlog(x){return Math.sign(x)*Math.log2(1+Math.abs(x))}
+function fmt(n){if(Math.abs(n)<1e15)return String(n);return n.toExponential(3)}
+
+// ---------- widgets ----------
+var W={};
+function mk(id,opt){
+  var w={id:id,v:opt.v||'sat',start:opt.start,hist:[],N:opt.N||0,dim:opt.dim||3,onUpdate:opt.onUpdate};
+  w.stepfn=w.dim===2?function(s,a){return step2(s,a)}:function(s,a){return step(w.v,s,a)};
+  w.cur=function(){var s=w.start.slice();for(var i=0;i<w.hist.length;i++)s=w.stepfn(s,w.hist[i]);return s};
+  w.traj=function(){var out=[w.start.slice()],s=w.start.slice();for(var i=0;i<w.hist.length;i++){s=w.stepfn(s,w.hist[i]);out.push(s)}return out};
+  w.act=function(a){if(w.dim===2&&a==='C')return;if(w.N&&w.hist.length>=w.N)return;w.hist.push(a);render(w)};
+  w.undo=function(){w.hist.pop();render(w)};
+  w.reset=function(){w.hist=[];render(w)};
+  w.play=function(str){w.hist=[];str.replace(/[^abc]/g,'').split('').forEach(function(ch){w.hist.push(ch.toUpperCase())});if(w.N)w.hist=w.hist.slice(0,w.N);render(w)};
+  W[id]=w;return w;
+}
+var COL=['var(--a)','var(--b)','var(--c)'];
+function render(w){
+  var s=w.cur(),bars=document.getElementById(w.id+'-bars');
+  if(bars){
+    var mx=Math.max(4,Math.max.apply(null,s.map(function(x){return Math.abs(x)})));
+    var html='';
+    for(var i=0;i<w.dim;i++){
+      var h=Math.max(2,Math.round(150*Math.log2(1+Math.abs(s[i]))/Math.log2(1+mx)));
+      var neg=s[i]<0;
+      html+='<div class="bar'+(neg?' neg':'')+'" data-w="'+w.id+'" data-act="'+'ABC'[i]+'" title="click = press '+'abc'[i]+'">'+
+        '<div class="val" style="color:'+COL[i]+'">'+fmt(s[i])+'</div>'+
+        '<div class="fill" style="height:'+h+'px;background:'+COL[i]+';opacity:'+(neg?'.45':'.85')+(neg?';border-top:2px dashed #000':'')+'"></div>'+
+        '<div class="key">'+'abc'[i]+'</div></div>';
+    }
+    bars.innerHTML=html;
+  }
+  var st=document.getElementById(w.id+'-status');
+  if(st&&w.dim===3){
+    var status=alive(s)?'<span class="alive">alive</span>':(w.v==='sat'?'<span class="dead">DEAD (a zero is forever)</span>':'<span class="sink">SINKING (negatives double down)</span>');
+    var turn='turn '+w.hist.length+(w.N?'/'+w.N:'');
+    st.innerHTML=turn+'  ('+s.join(', ')+')  min='+score(s)+'  prod='+fmt(prod(s))+'  '+status+'\nplay=['+w.hist.map(function(a){return a.toLowerCase()}).join('')+']';
+  }
+  if(w.onUpdate)w.onUpdate(w,s);
+}
+document.addEventListener('click',function(e){
+  var t=e.target.closest('[data-w]');if(!t)return;var w=W[t.dataset.w];if(!w)return;
+  if(t.dataset.act)w.act(t.dataset.act);
+  else if(t.dataset.cmd==='undo')w.undo();
+  else if(t.dataset.cmd==='reset')w.reset();
+  else if(t.dataset.cmd==='var'){w.v=w.v==='sat'?'nosat':'sat';document.getElementById('w1-vlabel').textContent=w.v==='sat'?'abc':'abc-1';render(w)}
+  else if(t.dataset.start){w.start=t.dataset.start.split(',').map(Number);w.hist=[];if(t.parentElement.classList.contains('pick')){Array.prototype.forEach.call(t.parentElement.children,function(b){b.classList.toggle('on',b===t)})}render(w)}
+  else if(t.dataset.play)w.play(t.dataset.play);
+  else if(t.dataset.playfn){var N=w.N,str='';if(t.dataset.playfn==='spam')str='a'.repeat(N);else if(t.dataset.playfn==='rot'){for(var i=0;i<N;i++)str+='abc'[i%3]}else{var k=Math.floor(N/3),r=N-3*k;str='a'.repeat(k+(r>0?1:0))+'b'.repeat(k)+'c'.repeat(k+(r>1?1:0))}w.play(str)}
+});
+
+// ---------- plotting (symlog, same transform as plots/plot.py) ----------
+function plot(svgId,series,T,opts){
+  var svg=document.getElementById(svgId);if(!svg)return;
+  var Wd=+svg.getAttribute('width'),H=+svg.getAttribute('height'),L=44,R=70,Tp=12,B=26;
+  var ys=[0];series.forEach(function(sr){sr.pts.forEach(function(p){ys.push(symlog(p[1]))})});
+  if(opts&&opts.hline!=null)ys.push(symlog(opts.hline));
+  var ymin=Math.min.apply(null,ys)-0.5,ymax=Math.max.apply(null,ys)+0.5;
+  T=Math.max(T,6);
+  var X=function(t){return L+(Wd-L-R)*t/T},Y=function(y){return Tp+(H-Tp-B)*(ymax-y)/(ymax-ymin)};
+  var o='';
+  var ticks=[0];for(var k=0;k<=60;k++){var v=Math.pow(2,k);if(symlog(v)<ymax)ticks.push(v);if(-symlog(v)>ymin)ticks.push(-v);if(symlog(v)>=ymax&&-symlog(v)<=ymin)break}
+  var skip=Math.max(1,Math.ceil(ticks.length/14));
+  ticks.forEach(function(v,i){if(v!==0&&i%skip)return;var y=Y(symlog(v));if(y<Tp||y>H-B)return;o+='<line x1="'+L+'" x2="'+(Wd-R)+'" y1="'+y+'" y2="'+y+'" stroke="'+(v===0?'#999':'#eee')+'"/><text x="'+(L-4)+'" y="'+(y+4)+'" text-anchor="end" font-size="10" fill="#666">'+(Math.abs(v)>=65536?(v<0?'-':'')+'2^'+Math.round(Math.log2(Math.abs(v))):v)+'</text>'});
+  for(var t=0;t<=T;t+=Math.max(1,Math.ceil(T/12)))o+='<text x="'+X(t)+'" y="'+(H-8)+'" text-anchor="middle" font-size="10" fill="#666">'+t+'</text>';
+  if(opts&&opts.hline!=null){var hy=Y(symlog(opts.hline));o+='<line x1="'+L+'" x2="'+(Wd-R)+'" y1="'+hy+'" y2="'+hy+'" stroke="#b00020" stroke-dasharray="6 3"/><text x="'+(Wd-R+4)+'" y="'+(hy+4)+'" font-size="10" fill="#b00020">'+opts.hlabel+'</text>'}
+  series.forEach(function(sr){
+    if(sr.pts.length<2)return;
+    var d=sr.pts.map(function(p,i){return (i?'L':'M')+X(p[0]).toFixed(1)+','+Y(symlog(p[1])).toFixed(1)}).join(' ');
+    o+='<path d="'+d+'" fill="none" stroke="'+sr.color+'" stroke-width="2"'+(sr.dash?' stroke-dasharray="4 3"':'')+'/>';
+    var last=sr.pts[sr.pts.length-1];o+='<text x="'+(X(last[0])+4)+'" y="'+(Y(symlog(last[1]))+4)+'" font-size="11" fill="'+sr.color+'">'+sr.label+'</text>';
+  });
+  svg.innerHTML=o;
+}
+function seriesOf(tr,withProd){
+  var cols=['#d62728','#2ca02c','#1f77b4'],lab=['a','b','c'];
+  var out=[0,1,2].map(function(i){return {color:cols[i],label:lab[i],pts:tr.map(function(s,t){return [t,s[i]]})}});
+  if(withProd)out.push({color:'#9467bd',label:'a·b·c',dash:true,pts:tr.map(function(s,t){return [t,prod(s)]})});
+  return out;
+}
+function thm(file,body,ax){return '<pre class="thm"><span class="file">'+file+'</span>'+body+(ax?'\n<span class="ax">'+ax+'</span>':'')+'</pre>'}
+
+// ---------- scene 2 theorem panel (statements copied verbatim from Abc.lean) ----------
+var THM2={
+ '2':thm('Abc.lean','<span class="c">/-- **Doomed.** From (2,2,2), after any two moves some value is 0 — and then stays 0 forever. -/</span>\n<span class="k">theorem</span> <span class="n">doomed2</span> : ∀ (x y : Act) (rest : List Act), hasZero (runFrom .sat s2 (x :: y :: rest)) = true',"'Abc.doomed2' depends on axioms: [propext, Quot.sound]")+'<p class="small">9 two-move cases by <code>decide</code>, then <code>zero_forever_run</code>: a zero never leaves under any continuation.</p>',
+ '3':thm('Abc.lean','<span class="c">/-- **Trapped.** From (3,3,3), *no play of any length* ever gets all three above 3. -/</span>\n<span class="k">theorem</span> <span class="n">trapped3</span> : ∀ p : List Act, score (runFrom .sat s3 p) ≤ 3\n<span class="c">/-- **Survivable.** From (3,3,3) there is a play of every length 3+3k that ends alive at (4,3,2). -/</span>\n<span class="k">theorem</span> <span class="n">survive3</span> : ∀ k, runFrom .sat s3 (forever k) = ⟨4,3,2⟩',"'Abc.trapped3' depends on axioms: [propext, Quot.sound]\n'Abc.survive3' depends on axioms: [propext]")+'<p class="small">Proof of trapped3: invariant <code>s ∈ F ∨ hasZero s</code> over the 97-state set F, closed under all moves (<code>F_closed</code> by <code>decide</code>) — an invariant, not an enumeration of plays. The 3-cycle (4,3,2)→(3,2,4)→(2,4,3)→(4,3,2) is <code>cyc_returns</code>.</p>',
+ '4':thm('Abc.lean','<span class="c">/-- **Unbounded.** From (4,4,4), after k rounds of `grow` every value is ≥ 4·2^k. -/</span>\n<span class="k">theorem</span> <span class="n">unbounded4</span> : ∀ k, le (pow k) (runFrom .sat s4 (growK k))\n<span class="c">/-- Plain-English corollary: name any bound M; some play makes even the weakest value exceed it. -/</span>\n<span class="k">theorem</span> <span class="n">unbounded4_score</span> : ∀ M : Nat, ∃ p : List Act, (M : Int) ≤ score (runFrom .sat s4 p)',"'Abc.unbounded4_score' depends on axioms: [propext, Classical.choice, Quot.sound]")+'<p class="small"><code>grow = [.C,.B,.A,.A,.B,.C,.A,.C,.B]</code> takes (4,4,4) to (10,10,13) ≥ (8,8,8) (<code>grow_doubles</code>); then <code>run_mono</code> + <code>run_dbl</code> (run(2s) ≥ 2·run(s)) by induction on k.</p>'
+};
+
+mk('w1',{start:[4,4,4],v:'sat'});
+mk('w2',{start:[3,3,3],v:'sat',onUpdate:function(w,s){
+  var tr=w.traj(),best=Math.max.apply(null,tr.map(score));
+  var k=String(w.start[0]);var cap=k==='3'?3:(k==='2'?0:null);
+  var msg=String(best);
+  if(k==='3')msg+=' <span class="small">(proven: ≤ 3 for every play of every length'+(best<=3?' ✓':' ✗ impossible — JS would be wrong')+')</span>';
+  if(k==='2')msg+=' <span class="small">(proven: a zero by move 2, forever'+(w.hist.length>=2?(s.indexOf(0)>=0?' ✓ now hasZero':' ✗ impossible — JS would be wrong'):'')+')</span>';
+  if(k==='4')msg+=' <span class="small">(proven: no cap — unbounded)</span>';
+  document.getElementById('w2-best').innerHTML=msg;
+  plot('w2-plot',seriesOf(tr,false),Math.max(tr.length-1,12),cap!=null?{hline:cap,hlabel:(k==='2'?'min = 0 after 2':'min ≤ 3')}:null);
+  document.getElementById('w2-thm').innerHTML=THM2[k]||'';
+}});
+mk('w3',{start:[4,4,4],v:'sat',N:6,onUpdate:function(w,s){
+  var p=prod(s),v=document.getElementById('w3-verdict');
+  if(w.hist.length<6)v.innerHTML='Product now '+p+'. '+(6-w.hist.length)+' turn(s) left. Proven: every 6-move play ends ≤ 336.';
+  else v.innerHTML='Final product <b>'+p+'</b> '+(p===336?'= 336 — <span style="color:var(--ok)">you hit the proven optimum</span> (6·7·8 up to order).':(p<336?'&lt; 336 — below the proven optimum (<code>prodPar6_sat_bound</code>). Hint: keep them consecutive.':'&gt; 336 — impossible by <code>prodPar6_sat_bound</code>; the JS would be wrong.'));
+}});
+var w4=mk('w4',{start:[1,1,1],v:'nosat',N:9,onUpdate:function(w,s){
+  var N=w.N,bound=Math.pow(2,N)*(N-1)*(N-1),tr=w.traj(),p=prod(s);
+  document.getElementById('w4-bound').textContent=fmt(bound);
+  var v=document.getElementById('w4-verdict');
+  var signs=s.filter(function(x){return x<0}).length;
+  var tail=' Negatives: '+signs+(signs===2?' — two negatives ⇒ positive product (the sign trick).':signs%2?' — odd ⇒ product ≤ 0.':'.');
+  if(w.hist.length<N)v.innerHTML='Product now '+fmt(p)+'.'+tail+' '+(N-w.hist.length)+' turn(s) left.';
+  else v.innerHTML='Final product <b>'+fmt(p)+'</b> vs bound 2^'+N+'·'+(N-1)+'² = '+fmt(bound)+': '+(p===bound?'<span style="color:var(--ok)">equal — you matched spam (<code>spam_attains</code>).</span>':(p<bound?(p>0?(bound/p).toPrecision(3)+'× ':'')+'below the proven bound (<code>spam_optimal</code>).':'above — impossible by <code>spam_optimal</code>; the JS would be wrong.'))+tail;
+  plot('w4-plot',seriesOf(tr,true),N,{hline:bound,hlabel:'2^N(N−1)²'});
+  document.getElementById('w4-thm').innerHTML=thm('Optimal.lean','<span class="c">/-- **Spam is optimal at every horizon N ≥ 2.** For *every* play of length N from (1,1,1) in abc-1,\n    the product is at most 2^N·(N−1)². (N ≤ 1 is `decide`.) -/</span>\n<span class="k">theorem</span> <span class="n">spam_optimal</span> (p : List Act) (hN : 2 ≤ p.length) :\n    prod (runFrom .nosat s1 p) ≤ bound p.length\n<span class="k">theorem</span> <span class="n">spam_attains</span> (n : Nat) : prod (runFrom .nosat s1 (List.replicate n .A)) = bound n\n<span class="k">def</span> <span class="n">bound</span> (N : Nat) : Int := (2:Int)^N * (((N:Int) - 1) * ((N:Int) - 1))',"'Abc.spam_optimal' depends on axioms: [propext, Classical.choice, Quot.sound]\n'Abc.spam_attains' depends on axioms: [propext, Classical.choice, Quot.sound]")+'<p class="small">Proof idea (no enumeration over plays): <b>box invariant</b> — a coordinate doubled k times and decremented d times, in any order, satisfies 2^k(1−d) ≤ x ≤ 2^k (<code>box_run</code>). Then a sign split: odd negatives ⇒ ≤ 0; none ⇒ ≤ 2^N; two ⇒ ≤ 2^N(d_y−1)(d_z−1) ≤ 2^N(N−1)². Equality forces the other two keys never pressed = spam.</p>';
+}});
+document.getElementById('w4-N').addEventListener('change',function(){var n=Math.max(2,Math.min(40,+this.value||9));this.value=n;w4.N=n;w4.hist=w4.hist.slice(0,n);render(w4)});
+mk('w5',{start:[1,1],v:'nosat',N:8,dim:2,onUpdate:function(w,s){
+  var st=document.getElementById('w5-status'),p=s[0]*s[1];
+  st.innerHTML='turn '+w.hist.length+'/8  (a, b) = ('+s.join(', ')+')  prod2 = '+p+'  play=['+w.hist.map(function(a){return a.toLowerCase()}).join('')+']'+(w.hist.length===8?(p===128?'\n<span class="alive">= 128, the proven 2-D optimum (par2_8_bound)</span>':(p<=0?'\n<span class="dead">≤ 0 — one negative; spam2_nonpos</span>':'\n≤ 128 ✓ (par2_8_bound)')):'');
+}});
+
+// ---------- scenes / nav ----------
+var scenes=Array.prototype.slice.call(document.querySelectorAll('.scene')),nav=document.getElementById('nav'),cur=0;
+scenes.forEach(function(sc,i){var b=document.createElement('button');b.textContent=sc.dataset.title;b.onclick=function(){go(i)};nav.appendChild(b)});
+var arrows=document.createElement('span');arrows.className='arrows';arrows.innerHTML='<button id="prev" title="←">←</button><button id="next" title="→">→</button>';nav.appendChild(arrows);
+document.getElementById('prev').onclick=function(){go(cur-1)};document.getElementById('next').onclick=function(){go(cur+1)};
+function go(i){cur=(i+scenes.length)%scenes.length;scenes.forEach(function(s,j){s.classList.toggle('on',j===cur)});Array.prototype.forEach.call(nav.querySelectorAll('button'),function(b,j){if(j<scenes.length)b.classList.toggle('on',j===cur)});try{history.replaceState(null,'','#s'+(cur+1))}catch(e){}}
+var h=location.hash.match(/#s(\d)/);go(h?+h[1]-1:0);
+var active=['w1','w2','w3','w4','w5'];
+document.addEventListener('keydown',function(e){
+  if(e.target.tagName==='INPUT')return;
+  var k=e.key.toLowerCase();
+  if(e.key==='ArrowRight'){go(cur+1);e.preventDefault()}else if(e.key==='ArrowLeft'){go(cur-1);e.preventDefault()}
+  else{var w=W[active[cur]];if(!w)return;if(k==='a'||k==='b'||k==='c')w.act(k.toUpperCase());else if(k==='u')w.undo();else if(k==='r')w.reset()}
+});
+Object.keys(W).forEach(function(id){render(W[id])});
+})();
+</script>
+</body></html>

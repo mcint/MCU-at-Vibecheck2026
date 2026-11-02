@@ -1,0 +1,456 @@
+{
+ "generator": "builtin-js-sample (replace with: lake exe pd)",
+ "schema": "pd-framings/v1",
+ "note": "Reference framings from the JS model, Python-ported. The Lean exe `pd` emits the same schema with generator starting 'lean-'.",
+ "profiles": [
+  "strict",
+  "te-first",
+  "cl-first",
+  "last-cl",
+  "te-ignore",
+  "obs-fold",
+  "bare-lf"
+ ],
+ "inputs": [
+  {
+   "id": "cl_te",
+   "raw": "POST /search HTTP/1.1\r\nHost: demo\r\nContent-Length: 6\r\nTransfer-Encoding: chunked\r\n\r\n0\r\n\r\nG",
+   "profiles": {
+    "strict": {
+     "reject": true,
+     "reason": "both Content-Length and Transfer-Encoding",
+     "method": null,
+     "bodyLen": null,
+     "restLen": null
+    },
+    "te-first": {
+     "reject": false,
+     "reason": null,
+     "method": "chunked",
+     "bodyLen": 0,
+     "restLen": 1
+    },
+    "cl-first": {
+     "reject": false,
+     "reason": null,
+     "method": "CL(6)",
+     "bodyLen": 6,
+     "restLen": 0
+    },
+    "last-cl": {
+     "reject": false,
+     "reason": null,
+     "method": "CL(6)",
+     "bodyLen": 6,
+     "restLen": 0
+    },
+    "te-ignore": {
+     "reject": false,
+     "reason": null,
+     "method": "CL(6)",
+     "bodyLen": 6,
+     "restLen": 0
+    },
+    "obs-fold": {
+     "reject": false,
+     "reason": null,
+     "method": "chunked",
+     "bodyLen": 0,
+     "restLen": 1
+    },
+    "bare-lf": {
+     "reject": false,
+     "reason": null,
+     "method": "chunked",
+     "bodyLen": 0,
+     "restLen": 1
+    }
+   }
+  },
+  {
+   "id": "cl_dot_te",
+   "raw": "POST / HTTP/1.1\r\nHost: demo\r\nContent-Length: 40\r\nTransfer-Encoding: chunked\r\n\r\n0\r\n\r\nGET /admin HTTP/1.1\r\nHost: demo\r\n\r\n",
+   "profiles": {
+    "strict": {
+     "reject": true,
+     "reason": "both Content-Length and Transfer-Encoding",
+     "method": null,
+     "bodyLen": null,
+     "restLen": null
+    },
+    "te-first": {
+     "reject": false,
+     "reason": null,
+     "method": "chunked",
+     "bodyLen": 0,
+     "restLen": 35
+    },
+    "cl-first": {
+     "reject": false,
+     "reason": null,
+     "method": "CL(40)",
+     "bodyLen": 40,
+     "restLen": 0
+    },
+    "last-cl": {
+     "reject": false,
+     "reason": null,
+     "method": "CL(40)",
+     "bodyLen": 40,
+     "restLen": 0
+    },
+    "te-ignore": {
+     "reject": false,
+     "reason": null,
+     "method": "CL(40)",
+     "bodyLen": 40,
+     "restLen": 0
+    },
+    "obs-fold": {
+     "reject": false,
+     "reason": null,
+     "method": "chunked",
+     "bodyLen": 0,
+     "restLen": 35
+    },
+    "bare-lf": {
+     "reject": false,
+     "reason": null,
+     "method": "chunked",
+     "bodyLen": 0,
+     "restLen": 35
+    }
+   }
+  },
+  {
+   "id": "te_dot_cl",
+   "raw": "POST / HTTP/1.1\r\nHost: demo\r\nContent-Length: 4\r\nTransfer-Encoding: chunked\r\n\r\n23\r\nGET /admin HTTP/1.1\r\nHost: demo\r\n\r\n\r\n0\r\n\r\n",
+   "profiles": {
+    "strict": {
+     "reject": true,
+     "reason": "both Content-Length and Transfer-Encoding",
+     "method": null,
+     "bodyLen": null,
+     "restLen": null
+    },
+    "te-first": {
+     "reject": false,
+     "reason": null,
+     "method": "chunked",
+     "bodyLen": 35,
+     "restLen": 0
+    },
+    "cl-first": {
+     "reject": false,
+     "reason": null,
+     "method": "CL(4)",
+     "bodyLen": 4,
+     "restLen": 42
+    },
+    "last-cl": {
+     "reject": false,
+     "reason": null,
+     "method": "CL(4)",
+     "bodyLen": 4,
+     "restLen": 42
+    },
+    "te-ignore": {
+     "reject": false,
+     "reason": null,
+     "method": "CL(4)",
+     "bodyLen": 4,
+     "restLen": 42
+    },
+    "obs-fold": {
+     "reject": false,
+     "reason": null,
+     "method": "chunked",
+     "bodyLen": 35,
+     "restLen": 0
+    },
+    "bare-lf": {
+     "reject": false,
+     "reason": null,
+     "method": "chunked",
+     "bodyLen": 35,
+     "restLen": 0
+    }
+   }
+  },
+  {
+   "id": "dup_cl",
+   "raw": "POST / HTTP/1.1\r\nHost: demo\r\nContent-Length: 6\r\nContent-Length: 5\r\n\r\n12345Z",
+   "profiles": {
+    "strict": {
+     "reject": true,
+     "reason": "multiple differing Content-Length",
+     "method": null,
+     "bodyLen": null,
+     "restLen": null
+    },
+    "te-first": {
+     "reject": true,
+     "reason": "multiple differing Content-Length",
+     "method": null,
+     "bodyLen": null,
+     "restLen": null
+    },
+    "cl-first": {
+     "reject": false,
+     "reason": null,
+     "method": "CL(6)",
+     "bodyLen": 6,
+     "restLen": 0
+    },
+    "last-cl": {
+     "reject": false,
+     "reason": null,
+     "method": "CL(5)",
+     "bodyLen": 5,
+     "restLen": 1
+    },
+    "te-ignore": {
+     "reject": false,
+     "reason": null,
+     "method": "CL(6)",
+     "bodyLen": 6,
+     "restLen": 0
+    },
+    "obs-fold": {
+     "reject": false,
+     "reason": null,
+     "method": "CL(6)",
+     "bodyLen": 6,
+     "restLen": 0
+    },
+    "bare-lf": {
+     "reject": false,
+     "reason": null,
+     "method": "CL(5)",
+     "bodyLen": 5,
+     "restLen": 1
+    }
+   }
+  },
+  {
+   "id": "obs_fold",
+   "raw": "POST / HTTP/1.1\r\nHost: demo\r\nContent-Length: 6\r\nX-Foo: bar\r\n\tTransfer-Encoding: chunked\r\n\r\n0\r\n\r\nG",
+   "profiles": {
+    "strict": {
+     "reject": true,
+     "reason": "obs-fold (obsolete line folding)",
+     "method": null,
+     "bodyLen": null,
+     "restLen": null
+    },
+    "te-first": {
+     "reject": true,
+     "reason": "obs-fold (obsolete line folding)",
+     "method": null,
+     "bodyLen": null,
+     "restLen": null
+    },
+    "cl-first": {
+     "reject": false,
+     "reason": null,
+     "method": "CL(6)",
+     "bodyLen": 6,
+     "restLen": 0
+    },
+    "last-cl": {
+     "reject": false,
+     "reason": null,
+     "method": "CL(6)",
+     "bodyLen": 6,
+     "restLen": 0
+    },
+    "te-ignore": {
+     "reject": false,
+     "reason": null,
+     "method": "CL(6)",
+     "bodyLen": 6,
+     "restLen": 0
+    },
+    "obs-fold": {
+     "reject": false,
+     "reason": null,
+     "method": "CL(6)",
+     "bodyLen": 6,
+     "restLen": 0
+    },
+    "bare-lf": {
+     "reject": false,
+     "reason": null,
+     "method": "chunked",
+     "bodyLen": 0,
+     "restLen": 1
+    }
+   }
+  },
+  {
+   "id": "bare_lf",
+   "raw": "POST / HTTP/1.1\r\nHost: demo\r\nTransfer-Encoding: chunked\r\n\r\n0\n\nG",
+   "profiles": {
+    "strict": {
+     "reject": true,
+     "reason": "bare LF in chunk framing",
+     "method": null,
+     "bodyLen": null,
+     "restLen": null
+    },
+    "te-first": {
+     "reject": true,
+     "reason": "bare LF in chunk framing",
+     "method": null,
+     "bodyLen": null,
+     "restLen": null
+    },
+    "cl-first": {
+     "reject": true,
+     "reason": "bare LF in chunk framing",
+     "method": null,
+     "bodyLen": null,
+     "restLen": null
+    },
+    "last-cl": {
+     "reject": true,
+     "reason": "bare LF in chunk framing",
+     "method": null,
+     "bodyLen": null,
+     "restLen": null
+    },
+    "te-ignore": {
+     "reject": false,
+     "reason": null,
+     "method": "none",
+     "bodyLen": 0,
+     "restLen": 4
+    },
+    "obs-fold": {
+     "reject": true,
+     "reason": "bare LF in chunk framing",
+     "method": null,
+     "bodyLen": null,
+     "restLen": null
+    },
+    "bare-lf": {
+     "reject": false,
+     "reason": null,
+     "method": "chunked",
+     "bodyLen": 0,
+     "restLen": 1
+    }
+   }
+  },
+  {
+   "id": "chunk_ext",
+   "raw": "POST / HTTP/1.1\r\nHost: demo\r\nContent-Length: 10\r\nTransfer-Encoding: chunked\r\n\r\n5;ext=1\r\nHELLO\r\n0;x=y\r\n\r\nSMUG",
+   "profiles": {
+    "strict": {
+     "reject": true,
+     "reason": "both Content-Length and Transfer-Encoding",
+     "method": null,
+     "bodyLen": null,
+     "restLen": null
+    },
+    "te-first": {
+     "reject": false,
+     "reason": null,
+     "method": "chunked",
+     "bodyLen": 5,
+     "restLen": 4
+    },
+    "cl-first": {
+     "reject": false,
+     "reason": null,
+     "method": "CL(10)",
+     "bodyLen": 10,
+     "restLen": 19
+    },
+    "last-cl": {
+     "reject": false,
+     "reason": null,
+     "method": "CL(10)",
+     "bodyLen": 10,
+     "restLen": 19
+    },
+    "te-ignore": {
+     "reject": false,
+     "reason": null,
+     "method": "CL(10)",
+     "bodyLen": 10,
+     "restLen": 19
+    },
+    "obs-fold": {
+     "reject": false,
+     "reason": null,
+     "method": "chunked",
+     "bodyLen": 5,
+     "restLen": 4
+    },
+    "bare-lf": {
+     "reject": false,
+     "reason": null,
+     "method": "chunked",
+     "bodyLen": 5,
+     "restLen": 4
+    }
+   }
+  },
+  {
+   "id": "te_x",
+   "raw": "POST / HTTP/1.1\r\nHost: demo\r\nContent-Length: 6\r\nTransfer-Encoding: xchunked\r\n\r\n0\r\n\r\nG",
+   "profiles": {
+    "strict": {
+     "reject": true,
+     "reason": "unrecognized transfer coding \"xchunked\"",
+     "method": null,
+     "bodyLen": null,
+     "restLen": null
+    },
+    "te-first": {
+     "reject": false,
+     "reason": null,
+     "method": "CL(6)",
+     "bodyLen": 6,
+     "restLen": 0
+    },
+    "cl-first": {
+     "reject": false,
+     "reason": null,
+     "method": "CL(6)",
+     "bodyLen": 6,
+     "restLen": 0
+    },
+    "last-cl": {
+     "reject": false,
+     "reason": null,
+     "method": "CL(6)",
+     "bodyLen": 6,
+     "restLen": 0
+    },
+    "te-ignore": {
+     "reject": false,
+     "reason": null,
+     "method": "CL(6)",
+     "bodyLen": 6,
+     "restLen": 0
+    },
+    "obs-fold": {
+     "reject": false,
+     "reason": null,
+     "method": "CL(6)",
+     "bodyLen": 6,
+     "restLen": 0
+    },
+    "bare-lf": {
+     "reject": false,
+     "reason": null,
+     "method": "chunked",
+     "bodyLen": 0,
+     "restLen": 1
+    }
+   }
+  }
+ ]
+}
