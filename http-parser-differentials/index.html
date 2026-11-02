@@ -25,7 +25,10 @@ table.out th{background:var(--card);font-size:.72rem;text-transform:uppercase;le
 .parser b{color:var(--ink)}.parser small{color:var(--dim);font-weight:400}
 .dec{font-weight:700;font-family:ui-monospace,Menlo,monospace}
 .dec.te,.dec.cl,.dec.cla{color:var(--good)}
+.dec.reject{color:var(--bad)}
 .rej td{background:var(--badbg)}.rej .dec{color:var(--bad)}
+.defs{font-size:.82rem;margin:.5rem 0}.defs div{margin:.15rem 0}.defs .d{color:var(--dim)}
+.legend .input{color:var(--in)}.legend .ok{color:var(--good)}.legend .no{color:var(--bad)}.legend .conf{color:var(--warn)}
 .acc{color:var(--dim);font-size:.82rem}
 .tilde{color:var(--warn)}
 .legend{display:flex;gap:1rem;flex-wrap:wrap;font-size:.76rem;color:var(--dim);margin:.6rem 0}
@@ -52,19 +55,20 @@ td.self{background:repeating-linear-gradient(45deg,transparent,transparent 4px,v
 <div class="cols">
  <div><div class="lbl in">input · crafted request</div><div class="inbox" id="inbox"></div>
   <div class="legend">
-   <span><span class="sw" style="background:var(--inbg);border-color:var(--in)"></span>input</span>
-   <span><span class="sw" style="background:var(--goodbg);border-color:var(--good)"></span>accepted decision</span>
-   <span><span class="sw" style="background:var(--badbg);border-color:var(--bad)"></span>rejected (400)</span>
-   <span><span class="sw" style="background:color-mix(in srgb,var(--warn) 28%,transparent)"></span>conflicting bytes</span>
+   <span><span class="sw" style="background:var(--inbg);border-color:var(--in)"></span><span class="input">input</span></span>
+   <span><span class="sw" style="background:var(--goodbg);border-color:var(--good)"></span><span class="ok">accepted decision</span></span>
+   <span><span class="sw" style="background:var(--badbg);border-color:var(--bad)"></span><span class="no">rejected (400)</span></span>
+   <span><span class="sw" style="background:color-mix(in srgb,var(--warn) 28%,transparent)"></span><span class="conf">conflicting bytes</span></span>
    <span><span class="tilde">~</span> uncertain</span>
   </div></div>
  <div><div class="lbl out">output · each parser's decision</div>
   <table class="out"><thead><tr><th>parser</th><th>decision</th><th>frames body by</th></tr></thead><tbody id="rows"></tbody></table>
+  <div class="lbl out" style="margin-top:.6rem">decisions · what each means</div><div class="defs" id="defs"></div>
  </div>
 </div>
 <details class="mx"><summary>▸ front-end × back-end matrix — which pairings desync on this input</summary>
  <div class="inner">
-  <p class="note">Row = front-end (first hop) · Column = back-end (second hop). <b class="dec" style="color:var(--bad)">DESYNC</b> = the two frame the request differently and neither rejects → smuggling. <span style="color:var(--good)">agree</span> = same framing. <span style="color:var(--dim)">blocked</span> = at least one rejects (safe).</p>
+  <p class="note">Row = front-end (first hop) · Column = back-end (second hop). <b class="dec reject">DESYNC</b> = the two frame the request differently and neither rejects → smuggling. <b class="dec te">agree</b> = same framing. <b class="dec" style="color:var(--dim)">blocked</b> = at least one rejects (safe).</p>
   <table class="m" id="mtab"></table>
  </div>
 </details>
@@ -169,6 +173,7 @@ let ei=0;
 const esc=s=>(s||'').replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));
 const pid=id=>P.find(p=>p.id===id);
 document.getElementById('disc').textContent='⚠ '+D.disclaimer;
+const _cls=k=>k==='reject'?'reject':k.toLowerCase();document.getElementById('defs').innerHTML=Object.entries(D.interp_legend).map(([k,v])=>`<div><span class="dec ${_cls(k)}">${k==='reject'?'REJECT':esc(k)}</span> <span class="d">— ${esc(v)}</span></div>`).join('');
 document.getElementById('refs').innerHTML='sources: '+D.refs.map(r=>`<a href="${esc(r.url)}" target="_blank">${esc(r.label)} ↗</a>`).join(' · ');
 function renderInput(e){
  let s='';
