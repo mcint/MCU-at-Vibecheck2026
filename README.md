@@ -1,5 +1,7 @@
 # MCU · Vibecheck 2026
 
+[FMxAI](https://fmxai.org) · [Vibecheck hackathon](https://fmxai.org/vibecheck/) — the usable formal methods hackathon, Nov 1–2 2026, SF.
+
 **Live site: https://mcint.github.io/MCU-at-Vibecheck2026/** — all demos, static, no install. Source: this repo.
 
 | # | demo | live | what you see in 60 s | what Lean proves |
