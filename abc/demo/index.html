@@ -466,6 +466,7 @@ mk('w5',{start:[1,1],v:'nosat',N:8,dim:2,onUpdate:function(w,s){
 
 // ---------- scenes / nav ----------
 var scenes=Array.prototype.slice.call(document.querySelectorAll('.scene')),nav=document.getElementById('nav'),cur=0;
+window.addEventListener('hashchange',function(){var m=location.hash.match(/#s(\d)/);if(m&&(+m[1]-1)!==cur)go(+m[1]-1);});
 scenes.forEach(function(sc,i){var b=document.createElement('button');b.textContent=sc.dataset.title;b.onclick=function(){go(i)};nav.appendChild(b)});
 var arrows=document.createElement('span');arrows.className='arrows';arrows.innerHTML='<button id="prev" title="←">←</button><button id="next" title="→">→</button>';nav.appendChild(arrows);
 document.getElementById('prev').onclick=function(){go(cur-1)};document.getElementById('next').onclick=function(){go(cur+1)};

@@ -160,12 +160,14 @@ function go(i){scene=Math.max(0,Math.min(SCENES.length-1,i));var s=SCENES[scene]
  $('thmNoCliff').style.opacity=showProp?1:.4;
  $('prev').disabled=scene===0;$('next').disabled=scene===SCENES.length-1;
  zoomWide=s.wide;$('zoom').textContent=zoomWide?'zoom: wide':'zoom: ±$150';
- setIncome(s.income,scene===1);}
+ setIncome(s.income,scene===1);syncHash();}
+var _hashLock=false,_hashReady=false;function syncHash(){if(_hashLock||!_hashReady)return;try{history.replaceState(null,'','#s='+(scene+1)+'&i='+income)}catch(e){}}
+function readHash(){var m={};location.hash.slice(1).split('&').forEach(function(kv){var p=kv.split('=');if(p[0])m[p[0]]=decodeURIComponent(p[1]||'')});return m;}
 $('prev').onclick=function(){go(scene-1);};$('next').onclick=function(){go(scene+1);};
 document.addEventListener('keydown',function(e){if(/INPUT|TEXTAREA/.test(e.target.tagName))return;if(e.key==='ArrowRight')go(scene+1);if(e.key==='ArrowLeft')go(scene-1);});
 // ---- income / live evaluation ----
 var income=CUT, liveTimer=null;
-function setIncome(i,pulse){income=Math.max(0,Math.min(200000,i|0));$('magi').value=income;$('magiN').value=income;render();
+function setIncome(i,pulse){income=Math.max(0,Math.min(200000,i|0));$('magi').value=income;$('magiN').value=income;render();syncHash();
  if(pulse){var v=$('curV');v.classList.remove('pulse');void v.offsetWidth;v.classList.add('pulse');}queryLean();}
 $('magi').oninput=function(e){setIncome(+e.target.value);};$('magiN').onchange=function(e){setIncome(+e.target.value);};
 $('raise').onclick=function(){setIncome(income+1,true);};
@@ -207,6 +209,7 @@ function queryLean(){clearTimeout(liveTimer);liveTimer=setTimeout(function(){var
   $('leanLive').innerHTML='<span class="badge warn">offline: JS mirror of the Lean definitions</span> <span class="src">start <code>python3 demo.py --port 8768</code> to route every point through the compiled Lean binary.</span>';
   $('status').textContent='numbers: JS mirror (server not reachable)';}});
  },120);}
-go(0);
+(function(){var h=readHash();var sc=parseInt(h.s||'1',10)-1;_hashLock=true;go(isNaN(sc)?0:sc);_hashLock=false;if(h.i!==undefined&&!isNaN(parseInt(h.i,10))){setIncome(parseInt(h.i,10));}_hashReady=true;syncHash();})();
+window.addEventListener('hashchange',function(){var h=readHash();var sc=parseInt(h.s||'1',10)-1;_hashLock=true;if(!isNaN(sc)&&sc!==scene)go(sc);if(h.i!==undefined&&parseInt(h.i,10)!==income)setIncome(parseInt(h.i,10));_hashLock=false;});
 })();
 </script></body></html>

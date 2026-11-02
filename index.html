@@ -66,9 +66,21 @@ footer{color:var(--dim);font-size:.8rem;padding:1.5rem 1.3rem}
 const T=[['s-http','1 · HTTP parser differentials'],['s-tax','2 · Policy Lab (tax cliff)'],['s-fault','3 · Fault analysis (737 MAX · TMI · Therac · CF)'],['s-vend','extra · Rulebreakers'],['s-abc','extra · abc / abc-1']];
 const nav=document.getElementById('nav');
 nav.innerHTML=T.map(([id,label],k)=>`<button class="${k===0?'on':''}${label.startsWith('extra')?' extra':''}" data-id="${id}">${label}</button>`).join('');
-nav.querySelectorAll('button').forEach(b=>b.onclick=()=>{
+const SHORT={'s-http':'http','s-tax':'tax','s-fault':'fault','s-vend':'vending','s-abc':'abc'};const LONG=Object.fromEntries(Object.entries(SHORT).map(([k,v])=>[v,k]));
+function select(id,inner,fromHash){
+ const b=nav.querySelector(`button[data-id="${id}"]`); if(!b) return;
  document.querySelectorAll('nav button').forEach(x=>x.classList.remove('on'));b.classList.add('on');
- document.querySelectorAll('main section').forEach(s=>s.classList.toggle('on',s.id===b.dataset.id));
+ document.querySelectorAll('main section').forEach(s=>s.classList.toggle('on',s.id===id));
  document.querySelector('.extras').style.display=b.classList.contains('extra')?'block':'none';
-});
+ const f=document.querySelector('#'+id+' iframe');
+ if(f){ const base=f.dataset.base||(f.dataset.base=f.getAttribute('src')); const want=base+(inner?'#'+inner:''); if(f.getAttribute('src')!==want) f.setAttribute('src',want); }
+ if(!fromHash){ try{history.replaceState(null,'','#'+SHORT[id]+(inner?'/'+inner:''))}catch(e){} }
+}
+function fromHash(){ const h=location.hash.slice(1); if(!h) return false; const [tab,...rest]=h.split('/'); const id=LONG[tab]||(document.getElementById(tab)?tab:null); if(!id) return false; select(id,rest.join('/'),true); return true; }
+nav.querySelectorAll('button').forEach(b=>b.onclick=()=>select(b.dataset.id,'',false));
+window.addEventListener('hashchange',fromHash);
+fromHash();
+// let iframes report their inner hash so the outer URL stays deep-linkable: poll (same-origin) every 1 s
+setInterval(()=>{ const on=document.querySelector('main section.on'); if(!on) return; const f=on.querySelector('iframe'); if(!f) return;
+ try{ const ih=f.contentWindow.location.hash.slice(1); const outer=location.hash.slice(1); const tab=SHORT[on.id]; const want=tab+(ih?'/'+ih:''); if(outer!==want&&outer.split('/')[0]===tab) history.replaceState(null,'','#'+want); }catch(e){} },1000);
 </script></body></html>

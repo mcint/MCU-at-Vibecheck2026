@@ -14,6 +14,16 @@
 
 Team **MCU** — FMxAI Vibecheck (usable formal methods) hackathon, Oct 31 – Nov 1 2026, SF.
 
+## Deep links
+The landing page keeps its state in the URL fragment: `#http`, `#tax`, `#fault`, `#vending`, `#abc`
+select a tab; `#<tab>/<inner-state>` also forwards state into the embedded demo, and the outer URL
+follows the demo as you click (same-origin iframe). Inner formats:
+- HTTP v2: `#i=<input 1–8>&fe=<front profile 0–6>&be=<back profile 0–6>&view=compact|detail`
+  → e.g. `#http/i=2&fe=2&be=1&view=detail` (CL.TE, CL-first front × TE-first back, detailed rows)
+- Policy Lab: `#s=<scene 1–5>&i=<income>` → e.g. `#tax/s=5&i=70000`
+- abc: `#s<scene 1–6>` → e.g. `#abc/s4` (the abc-1 sign trick)
+Standalone pages accept the same inner fragment directly.
+
 ## Viewing
 - **Static demos** (HTTP, fault-analysis): open `index.html` directly, or the folder's own
   `index.html`. No build, no network. Each inlines its own data.

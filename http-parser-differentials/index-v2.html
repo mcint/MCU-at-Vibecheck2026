@@ -374,16 +374,23 @@ function buildPresets(){
     sel.innerHTML='';
     PROFILES.forEach((pr,ix)=>{const o=document.createElement('option');o.value=ix;o.textContent=pr.name;sel.appendChild(o);});
     sel.value=si===0?2:1; /* front=cl-first, back=te-first */
-    sel.onchange=renderPicker;
+    sel.onchange=()=>{renderPicker();syncHash();};
   });
 }
+let _hashLock=false,_hashReady=false;
+function readHash(){const m={};location.hash.slice(1).split('&').forEach(kv=>{const p=kv.split('=');if(p[0])m[p[0]]=decodeURIComponent(p[1]||'')});return m;}
+function syncHash(){if(_hashLock||!_hashReady)return;try{history.replaceState(null,'','#i='+(scene+1)+'&fe='+$('fe').value+'&be='+$('be').value+'&view='+(document.body.classList.contains('detail')?'detail':'compact'))}catch(e){}}
+function applyHash(h){h=h||readHash();_hashLock=true;const i=parseInt(h.i||'',10);if(!isNaN(i)&&i>=1&&i<=INPUTS.length&&i-1!==scene){scene=i-1;loadScene();}
+  if(h.fe!==undefined&&$('fe').value!==h.fe){$('fe').value=h.fe;}if(h.be!==undefined&&$('be').value!==h.be){$('be').value=h.be;}
+  if(h.view){document.body.classList.toggle('detail',h.view==='detail');document.querySelectorAll('#view button').forEach(b=>b.classList.toggle('on',b.dataset.v===h.view));}
+  renderPicker();_hashLock=false;}
 function loadScene(){
   const inp=INPUTS[scene];
   $('editor').value=esc(inp.raw);
   $('cap').textContent=inp.cap;
   $('pos').textContent='input '+(scene+1)+'/'+INPUTS.length+' \u2014 '+inp.label;
   [...$('presets').children].forEach(b=>b.classList.toggle('sel',+b.dataset.ix===scene));
-  renderAll();
+  renderAll();syncHash();
 }
 function sigOf(r){return r.reject?('R:'+r.reason):(r.method+'|'+r.bodyLen+'|'+r.restLen);}
 function framesFor(raw){ return PROFILES.map(p=>frame(raw,p.flags)); }
@@ -556,7 +563,7 @@ function renderDebounced(){ clearTimeout(_t); _t=setTimeout(renderAll,120); }
  btns.forEach(b=>b.onclick=()=>apply(b.dataset.t)); })();
 renderLegend(); renderTimeline();
 (function(){const k='pd-view';const btns=[...document.querySelectorAll('#view button')];
- function apply(v){document.body.classList.toggle('detail',v==='detail');btns.forEach(b=>b.classList.toggle('on',b.dataset.v===v));try{localStorage.setItem(k,v)}catch(e){}}
+ function apply(v){document.body.classList.toggle('detail',v==='detail');btns.forEach(b=>b.classList.toggle('on',b.dataset.v===v));try{localStorage.setItem(k,v)}catch(e){};syncHash();}
  let v='compact';try{v=localStorage.getItem(k)||'compact'}catch(e){} apply(v); btns.forEach(b=>b.onclick=()=>apply(b.dataset.v));})();
 
 /* ---------- wiring ---------- */
@@ -580,8 +587,9 @@ document.addEventListener('keydown',e=>{
 if(new URLSearchParams(location.search).get('embed')==='1') document.body.classList.add('embed');
 
 buildPresets();
+window.addEventListener('hashchange',()=>applyHash());
 renderThm(null);
-loadScene();
+const _initHash=readHash();loadScene();applyHash(_initHash);_hashReady=true;syncHash();
 loadFixtures();
 </script>
 </body>
