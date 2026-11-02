@@ -1,0 +1,59 @@
+<!doctype html><html lang=en><head><meta charset=utf-8>
+<meta name=viewport content="width=device-width,initial-scale=1">
+<title>MCU · Vibecheck 2026 — demos</title>
+<style>
+:root{--ink:#1b1b1b;--dim:#808080;--acc:#0a6cff;--line:#e6e6e6;--bg:#fff;--card:#f7f7f8;--warn:#c8860a}
+@media(prefers-color-scheme:dark){:root{--ink:#eaeaea;--dim:#9aa;--acc:#6ab0ff;--line:#2c2c2c;--bg:#131313;--card:#1b1b1b;--warn:#e0a53a}}
+*{box-sizing:border-box}html{color-scheme:light dark}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.5 system-ui,sans-serif}
+header{padding:1rem 1.3rem .4rem}h1{font-size:1.3rem;margin:0}.sub{color:var(--dim);font-size:.9rem;max-width:60rem}
+nav{display:flex;gap:.4rem;flex-wrap:wrap;padding:.7rem 1.3rem;border-bottom:1px solid var(--line);position:sticky;top:0;background:var(--bg);z-index:3}
+nav button{font:inherit;border:1px solid var(--line);background:var(--card);color:var(--ink);border-radius:999px;padding:.25rem .8rem;cursor:pointer}
+nav button.on{background:var(--acc);color:#fff;border-color:var(--acc)}
+main{padding:1rem 1.3rem;max-width:1400px;margin:0 auto}
+section{display:none}section.on{display:block}
+.bar{display:flex;gap:1rem;align-items:baseline;flex-wrap:wrap;margin-bottom:.5rem}
+.bar h2{font-size:1.1rem;margin:0}.bar .pitch{color:var(--dim);flex:1 1 22rem}
+.bar a{color:var(--acc);text-decoration:none;font-size:.9rem}
+iframe{width:100%;height:76vh;border:1px solid var(--line);border-radius:10px;background:var(--bg)}
+.needs{font-size:.84rem;color:var(--warn);background:color-mix(in srgb,var(--warn) 12%,transparent);border:1px solid color-mix(in srgb,var(--warn) 40%,transparent);border-radius:8px;padding:.5rem .7rem;margin:.4rem 0}
+.needs code{background:color-mix(in srgb,var(--dim) 20%,transparent);padding:0 .3rem;border-radius:3px}
+.shot{width:100%;max-width:900px;border:1px solid var(--line);border-radius:10px}
+.refs{font-size:.85rem;color:var(--dim);margin-top:.5rem}.refs a{color:var(--acc);text-decoration:none}
+footer{color:var(--dim);font-size:.8rem;padding:1.5rem 1.3rem}
+</style></head><body>
+<header><h1>MCU · Vibecheck 2026</h1>
+<div class="sub">Three demos: usable software, formally verified. Each is viewable here (embedded) and standalone in its own folder. Lean does the checking; the on-screen artifact shows what it checked.</div></header>
+<nav id="nav"></nav>
+<main>
+ <section id="s-http" class="on">
+   <div class="bar"><h2>HTTP parser differentials</h2><span class="pitch">Two parsers, one request, two meanings → request smuggling. Pick a crafted request; rejects in red; open the front-end × back-end matrix to see which pairings desync.</span>
+     <a href="http-parser-differentials/index.html" target="_blank">open standalone ↗</a></div>
+   <iframe src="http-parser-differentials/index.html" title="HTTP parser differentials"></iframe>
+   <div class="refs">refs: <a href="http-parser-differentials/refs/BACKGROUND.md">BACKGROUND</a> · <a href="http-parser-differentials/refs/HTTP.md">HTTP (separability)</a> · <a href="http-parser-differentials/refs/HTTP-RECON.md">stack fingerprinting</a> · spec: <a href="http-parser-differentials/spec/">Lean model</a></div>
+ </section>
+ <section id="s-fault">
+   <div class="bar"><h2>Fault-analysis walk-throughs</h2><span class="pitch">The same control-safety lens across four real accidents — 737 MAX, Three Mile Island, Therac-25, Cloudflare 2019 — with Safety-I/II/III example rules and a safe-loosening finale. Switch scenarios top-left.</span>
+     <a href="fault-analysis/index.html" target="_blank">open standalone ↗</a></div>
+   <iframe src="fault-analysis/index.html" title="Fault-analysis walk-throughs"></iframe>
+   <div class="refs">refs: <a href="fault-analysis/refs/CONCEPT.md">CONCEPT</a> · <a href="fault-analysis/refs/RESOURCES.md">RESOURCES (history)</a> · <a href="fault-analysis/refs/GLOSSARY.md">GLOSSARY</a> · specs: <a href="fault-analysis/analysis/">scenario JSON</a></div>
+ </section>
+ <section id="s-tax">
+   <div class="bar"><h2>Policy Lab — the $1 raise that costs $1,691</h2><span class="pitch">The 2026 ACA premium-tax-credit cliff: find the bad rule, repair it, and Lean's kernel checks the repair for every income.</span>
+     <a href="tax-policy/README.md" target="_blank">README ↗</a> · <a href="tax-policy/DEMO.md" target="_blank">DEMO ↗</a></div>
+   <div class="needs">Interactive version is Lean-backed (calls a local API), so it runs standalone, not embedded:
+     <code>cd tax-policy &amp;&amp; python3 demo.py --port 8768</code> → <code>http://127.0.0.1:8768/</code>. Screenshot below; Lean specs in <code>tax-policy/TaxGame/</code>.</div>
+   <img class="shot" src="tax-policy/screenshot-cliff.png" alt="Policy Lab — ACA cliff graph">
+   <div class="refs">theorem: <code>current_has_cliff</code> (a witness) vs <code>proposed_no_cliff</code> (∀ income). specs: <a href="tax-policy/TaxGame/">TaxGame/*.lean</a> · <a href="tax-policy/vendor/catala/">Catala source</a></div>
+ </section>
+</main>
+<footer>Team <b>MCU</b> · FMxAI Vibecheck 2026 · each demo folder is self-contained. The two parser/fault demos are static (offline); Policy Lab needs its Lean-backed server.</footer>
+<script>
+const T=[['s-http','HTTP parser differentials'],['s-fault','Fault analysis (737 MAX · TMI · Therac · CF)'],['s-tax','Policy Lab (tax cliff)']];
+const nav=document.getElementById('nav');
+nav.innerHTML=T.map(([id,label],k)=>`<button class="${k===0?'on':''}" data-id="${id}">${label}</button>`).join('');
+nav.querySelectorAll('button').forEach(b=>b.onclick=()=>{
+ document.querySelectorAll('nav button').forEach(x=>x.classList.remove('on'));b.classList.add('on');
+ document.querySelectorAll('main section').forEach(s=>s.classList.toggle('on',s.id===b.dataset.id));
+});
+</script></body></html>

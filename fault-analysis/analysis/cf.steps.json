@@ -1,0 +1,603 @@
+{
+ "case": "Cloudflare WAF outage (2 Jul 2019)",
+ "oneliner": "One WAF rule with a catastrophic-backtracking regex was pushed to the whole fleet at once — CPU hit 100% everywhere and much of the web 502'd for ~27 minutes.",
+ "summary": "A new managed WAF rule contained a regular expression with catastrophic backtracking (ReDoS). It was deployed globally in one step, with no staged/canary rollout and no CPU bound on rule evaluation. On live traffic the regex went exponential, saturating CPU across Cloudflare's edge and returning 502s worldwide. A recent change had moved WAF execution in a way that removed an earlier CPU protection. Recovery came from a global 'WAF kill switch'. No single broken component: a pathological regex + global simultaneous rollout + a removed safeguard.",
+ "source": "Cloudflare, 'Details of the Cloudflare outage on July 2, 2019' (John Graham-Cumming)",
+ "source_url": "https://blog.cloudflare.com/details-of-the-cloudflare-outage-on-july-2-2019/",
+ "crosslink": "A regex/parser pathology — see ../../parser-differentials (ReDoS is a recognizer blowing up on crafted/ordinary input).",
+ "control_structure": {
+  "nodes": [
+   {
+    "id": "eng",
+    "label": "Rule author",
+    "x": 90,
+    "y": 55
+   },
+   {
+    "id": "pipe",
+    "label": "Deploy pipeline",
+    "x": 255,
+    "y": 55
+   },
+   {
+    "id": "waf",
+    "label": "WAF regex engine",
+    "x": 255,
+    "y": 135
+   },
+   {
+    "id": "edge",
+    "label": "Edge servers (CPU)",
+    "x": 255,
+    "y": 215
+   },
+   {
+    "id": "web",
+    "label": "Users / websites",
+    "x": 255,
+    "y": 295
+   },
+   {
+    "id": "mon",
+    "label": "Monitoring",
+    "x": 405,
+    "y": 175
+   }
+  ],
+  "edges": [
+   {
+    "from": "eng",
+    "to": "pipe",
+    "kind": "control",
+    "label": "push new WAF rule"
+   },
+   {
+    "from": "pipe",
+    "to": "waf",
+    "kind": "control",
+    "label": "deploy GLOBAL, no canary",
+    "missing": true
+   },
+   {
+    "from": "waf",
+    "to": "edge",
+    "kind": "control",
+    "label": "run regex on every request"
+   },
+   {
+    "from": "edge",
+    "to": "web",
+    "kind": "actuation",
+    "label": "serve / 502"
+   },
+   {
+    "from": "edge",
+    "to": "mon",
+    "kind": "feedback",
+    "label": "CPU, error rate"
+   },
+   {
+    "from": "mon",
+    "to": "eng",
+    "kind": "feedback",
+    "label": "alerts"
+   }
+  ]
+ },
+ "steps": [
+  {
+   "id": 1,
+   "driver": "STPA",
+   "stage": "the loss",
+   "short": {
+    "t": "The loss",
+    "move": "global 502s — the web goes dark",
+    "lean": "def hazard := fleetCPU = saturated",
+    "out": "the bad state to prevent"
+   },
+   "focus": {
+    "nodes": [
+     "web",
+     "edge"
+    ],
+    "edges": [
+     "edge->web"
+    ]
+   },
+   "rules": {
+    "S1": "define the forbidden outcome (global 502)",
+    "S2": "define a fast recovery",
+    "S3": "hazard = fleet CPU saturated"
+   },
+   "state": "define the loss",
+   "next_actions": [
+    "name loss",
+    "name hazard"
+   ],
+   "chosen": "hazard = edge CPU saturated, requests fail",
+   "lean_mapping": {
+    "obligation": "fix the bad-state predicate",
+    "lean": "def hazard (s) : Prop := s.cpu = saturated"
+   },
+   "outcome": "everything downstream targets this"
+  },
+  {
+   "id": 2,
+   "driver": "STPA",
+   "stage": "control structure",
+   "short": {
+    "t": "Who controls what",
+    "move": "author → pipeline → WAF → edge — and no canary gate",
+    "lean": "∀ deploy, passedCanary  — FAILS",
+    "out": "a straight path to 100% of the fleet"
+   },
+   "focus": {
+    "nodes": [
+     "eng",
+     "pipe",
+     "waf",
+     "edge"
+    ],
+    "edges": [
+     "pipe->waf",
+     "waf->edge"
+    ]
+   },
+   "rules": {
+    "S1": "deploy checklist",
+    "S2": "keep a fast global kill switch / rollback",
+    "S3": "no path to 100% without a canary gate (design)"
+   },
+   "state": "components + control/feedback links",
+   "next_actions": [
+    "draw deploy path",
+    "check for a staging gate"
+   ],
+   "chosen": "flag the missing canary gate",
+   "lean_mapping": {
+    "obligation": "control graph well-formed; a staging gate exists",
+    "lean": "theorem wf : ∀ d, reaches100 d → passedCanary d  -- FAILS: global push"
+   },
+   "outcome": "a rule can reach the whole fleet un-canaried"
+  },
+  {
+   "id": 3,
+   "driver": "STPA",
+   "stage": "control actions",
+   "short": {
+    "t": "The commands",
+    "move": "author rule · deploy (global|staged) · run regex",
+    "lean": "inductive Action | deployGlobal | …",
+    "out": "actions to stress-test"
+   },
+   "focus": {
+    "nodes": [
+     "pipe",
+     "waf"
+    ],
+    "edges": [
+     "pipe->waf"
+    ]
+   },
+   "rules": {
+    "S1": "rule-review procedure",
+    "S2": "preserve seconds-fast rollback",
+    "S3": "bound per-request CPU by design"
+   },
+   "state": "enumerate commands",
+   "next_actions": [
+    "list control actions"
+   ],
+   "chosen": "focus on deploy-global",
+   "lean_mapping": {
+    "obligation": "enumerate transition labels",
+    "lean": "inductive Action | deployGlobal | deployCanary | runRegex"
+   },
+   "outcome": "cross with guidewords next"
+  },
+  {
+   "id": 4,
+   "driver": "STPA",
+   "stage": "unsafe control action",
+   "short": {
+    "t": "The unsafe act",
+    "move": "deploy a rule fleet-wide, un-canaried, unbounded CPU",
+    "lean": "UCA1 s → hazard s",
+    "out": "the dangerous command"
+   },
+   "focus": {
+    "nodes": [
+     "pipe",
+     "waf",
+     "edge"
+    ],
+    "edges": [
+     "pipe->waf",
+     "waf->edge"
+    ]
+   },
+   "rules": {
+    "S1": "don't push a rule fleet-wide at once (procedure)",
+    "S2": "detect a CPU spike and auto-halt the rollout",
+    "S3": "no global deploy without passing canary (interlock)"
+   },
+   "state": "actions × {given/not/timing/order}",
+   "next_actions": [
+    "deploy global with no stage",
+    "deploy a CPU-unbounded regex"
+   ],
+   "chosen": "UCA1 = global deploy, no canary, no CPU bound",
+   "lean_mapping": {
+    "obligation": "grid coverage + each UCA names a bad state",
+    "lean": "def UCA1 (s) := s.deploy = global ∧ ¬s.canary\n theorem uca1_bad : UCA1 s → hazard s"
+   },
+   "outcome": "UCA1 → becomes a constraint"
+  },
+  {
+   "id": 5,
+   "driver": "STPA",
+   "stage": "safety constraint",
+   "short": {
+    "t": "The invariant",
+    "move": "reach 100% only after canary + bounded CPU",
+    "lean": "C1 s → ¬ UCA1 s",
+    "out": "the rule the outage breaks"
+   },
+   "focus": {
+    "nodes": [
+     "pipe",
+     "waf"
+    ],
+    "edges": [
+     "pipe->waf"
+    ]
+   },
+   "rules": {
+    "S1": "engineers: stage every WAF change",
+    "S2": "keep CPU headroom + a kill switch to absorb a bad rule",
+    "S3": "rule reaches 100% only after canary AND per-regex CPU bound (monitor)"
+   },
+   "state": "UCA1 → constraint C1",
+   "next_actions": [
+    "state invariant",
+    "prove or monitor?"
+   ],
+   "chosen": "state C1",
+   "lean_mapping": {
+    "obligation": "constraint excludes the UCA state",
+    "lean": "def C1 (s) := s.deploy = global → (s.canary ∧ s.cpuBounded)\n theorem c1_excludes : C1 s → ¬ UCA1 s"
+   },
+   "outcome": "C1 is what the outage will violate"
+  },
+  {
+   "id": 6,
+   "driver": "STPA",
+   "stage": "why it breaks",
+   "short": {
+    "t": "Why it breaks",
+    "move": "regex backtracks exponentially (ReDoS); 'regexes are cheap'",
+    "lean": "cpuBounded regex  (assumed, false)",
+    "out": "catastrophic backtracking + a removed CPU safeguard"
+   },
+   "focus": {
+    "nodes": [
+     "waf",
+     "edge"
+    ],
+    "edges": [
+     "waf->edge"
+    ]
+   },
+   "rules": {
+    "S1": "assumed regexes are cheap",
+    "S2": "pathological input happens — bound it",
+    "S3": "never run unbounded backtracking in the hot path (use RE2)"
+   },
+   "state": "why the controller issues the unsafe action",
+   "next_actions": [
+    "regex has catastrophic backtracking",
+    "a prior change removed the CPU protection"
+   ],
+   "chosen": "exponential regex on the hot path, unbounded",
+   "lean_mapping": {
+    "obligation": "C1's CPU bound needs the engine to be non-backtracking",
+    "lean": "theorem c1_needs_bound : (∀ r, lineartime r) → s.cpuBounded  -- false for PCRE backtracking"
+   },
+   "outcome": "C1 holds only if regex time is bounded"
+  },
+  {
+   "id": 7,
+   "driver": "CAST",
+   "stage": "the outage",
+   "short": {
+    "t": "The outage",
+    "move": "rule ships → CPU 100% fleetwide → global 502",
+    "lean": "∃ t, reach t ∧ ¬ C1",
+    "out": "outage = counterexample"
+   },
+   "focus": {
+    "nodes": [
+     "pipe",
+     "waf",
+     "edge",
+     "web",
+     "mon"
+    ],
+    "edges": [
+     "pipe->waf",
+     "waf->edge",
+     "edge->web",
+     "edge->mon"
+    ]
+   },
+   "rules": {
+    "S1": "change was reviewed, still global",
+    "S2": "no canary to catch it first",
+    "S3": "counterexample: ¬C1 reachable"
+   },
+   "state": "the real event sequence",
+   "next_actions": [
+    "which invariant does the trace violate?"
+   ],
+   "chosen": "trace reaches global ∧ ¬canary ∧ CPU saturated",
+   "lean_mapping": {
+    "obligation": "trace is a genuine counterexample to C1",
+    "lean": "theorem outage : ∃ t, reach t ∧ ¬ C1 (state t)  -- CAST = the witness"
+   },
+   "outcome": "explained as ¬C1, recovered via global kill switch"
+  },
+  {
+   "id": 8,
+   "driver": "CAST",
+   "stage": "who allowed it",
+   "short": {
+    "t": "Who allowed it",
+    "move": "process allowed global push · backtracking engine · safeguard removed",
+    "lean": "axiom cheap_regex  -- unearned",
+    "out": "the false assumption, owned by the process"
+   },
+   "focus": {
+    "nodes": [
+     "eng",
+     "pipe",
+     "waf"
+    ],
+    "edges": [
+     "eng->pipe",
+     "pipe->waf"
+    ]
+   },
+   "rules": {
+    "S1": "process permitted a simultaneous global push",
+    "S2": "a prior change removed the CPU safeguard",
+    "S3": "'global push is fine' = unearned axiom"
+   },
+   "state": "why each higher controller allowed it",
+   "next_actions": [
+    "no mandatory staging",
+    "PCRE backtracking in hot path",
+    "CPU protection removed by a recent change"
+   ],
+   "chosen": "the deploy process trusted global pushes",
+   "lean_mapping": {
+    "obligation": "make the proof's assumption explicit and owned",
+    "lean": "axiom cheap_regex : ∀ r, lineartime r  -- attributed to the process/engine choice"
+   },
+   "outcome": "the false axiom is the organizational cause"
+  },
+  {
+   "id": 9,
+   "driver": "STPA",
+   "stage": "the fix",
+   "short": {
+    "t": "The fix",
+    "move": "staged rollout + kill switch + RE2 / per-regex CPU budget",
+    "lean": "guard s = allow → C1 s",
+    "out": "canary gate + bounded regex time"
+   },
+   "focus": {
+    "nodes": [
+     "pipe",
+     "waf"
+    ],
+    "edges": [
+     "pipe->waf",
+     "waf->edge"
+    ]
+   },
+   "rules": {
+    "S1": "mandatory staged-rollout procedure",
+    "S2": "global kill switch + fast rollback",
+    "S3": "canary gate + RE2/non-backtracking + per-regex CPU budget (enforced)"
+   },
+   "state": "choose how to make C1 hold",
+   "next_actions": [
+    "dogfood → canary → global",
+    "bound regex CPU / RE2",
+    "global kill switch"
+   ],
+   "chosen": "staged rollout + CPU bound + kill switch",
+   "lean_mapping": {
+    "obligation": "a monitor/gate enforces a safety property (Schneider)",
+    "lean": "theorem monitor_sound : ∀ s, guard s = allow → C1 s"
+   },
+   "outcome": "UCA1 unreachable"
+  },
+  {
+   "id": 10,
+   "driver": "loosening",
+   "stage": "safe loosening",
+   "short": {
+    "t": "Safe loosening",
+    "move": "skip the canary to ship a fix faster? prove H first",
+    "lean": "C1' → ¬ hazard  — UNPROVABLE ⇒ refuse",
+    "out": "blocks the 'just push it globally' move"
+   },
+   "focus": {
+    "nodes": [
+     "pipe",
+     "waf"
+    ],
+    "edges": [
+     "pipe->waf"
+    ]
+   },
+   "rules": {
+    "S1": "skip staging only if risk is provably bounded (it wasn't)",
+    "S2": "don't remove the CPU safeguard to save time",
+    "S3": "refuse the skip unless H is provable without the canary"
+   },
+   "state": "ops wants to skip staging for a 'quick' rule",
+   "next_actions": [
+    "propose weaker C1'",
+    "demand certificate H still holds",
+    "accept iff provable"
+   ],
+   "chosen": "refuse: no certificate that CPU stays bounded without canary",
+   "lean_mapping": {
+    "obligation": "loosening admissible iff weakened constraint still entails H",
+    "lean": "-- SAFE iff provable: theorem loosen_ok : C1' s → ¬ hazard s\n-- UNPROVABLE here ⇒ refused (the 2019 push)"
+   },
+   "outcome": "ratchet is on H, not on the canary/CPU-bound constraints"
+  }
+ ],
+ "scale": {
+  "this": "1 invariant",
+  "real": "an edge platform ships 10^4+ config/rule changes",
+  "note": "safety invariants (CPU-bounded, canaried) sit atop a vast base of functional config properties",
+  "viz": "../fun-verification/viz/state-space.html"
+ },
+ "meta": {
+  "key": "cf",
+  "label": "Cloudflare WAF (2019)",
+  "domain": "web infra / SRE",
+  "why": "a global config push + a catastrophic-backtracking regex — no canary, no CPU bound."
+ },
+ "safety_models": {
+  "S1": {
+   "label": "Safety-I",
+   "tag": "safe IF rules are followed",
+   "note": "compliance: a constraint/procedure that guarantees safety when obeyed",
+   "author": "Erik Hollnagel",
+   "year": "2014 (named)",
+   "cite": "Hollnagel, 'Safety-I and Safety-II' (2014) — the traditional 'absence of accidents' view, named to contrast with Safety-II",
+   "url": "https://en.wikipedia.org/wiki/Erik_Hollnagel"
+  },
+  "S2": {
+   "label": "Safety-II",
+   "tag": "safe BY adapting",
+   "note": "preserve people's capacity to notice and recover under varying conditions",
+   "author": "Erik Hollnagel",
+   "year": "2014",
+   "cite": "Hollnagel, 'Safety-I and Safety-II' (2014); Hollnagel, Wears & Braithwaite, 'From Safety-I to Safety-II: A White Paper' (2015)",
+   "url": "https://en.wikipedia.org/wiki/Resilience_engineering"
+  },
+  "S3": {
+   "label": "Safety-III",
+   "tag": "safe BY design (enforced)",
+   "note": "Leveson: build the control structure so the unsafe action is impossible or monitored",
+   "author": "Nancy Leveson",
+   "year": "2020",
+   "cite": "Leveson, 'Safety-III: A Systems Approach to Safety and Resilience' (MIT white paper, 2020)",
+   "url": "https://psas.scripts.mit.edu/home/nancys-white-papers/"
+  }
+ },
+ "techniques": [
+  {
+   "name": "FMEA",
+   "full": "Failure Mode and Effects Analysis",
+   "author": "US Army (MIL-P-1629)",
+   "year": 1949,
+   "examples": "Apollo; automotive (ISO 26262); aerospace",
+   "url": "https://en.wikipedia.org/wiki/Failure_mode_and_effects_analysis"
+  },
+  {
+   "name": "FTA",
+   "full": "Fault Tree Analysis",
+   "author": "H.A. Watson, Bell Labs (USAF Minuteman)",
+   "year": 1962,
+   "examples": "nuclear (WASH-1400); aerospace",
+   "url": "https://en.wikipedia.org/wiki/Fault_tree_analysis"
+  },
+  {
+   "name": "HAZOP",
+   "full": "Hazard and Operability Study",
+   "author": "ICI / Trevor Kletz",
+   "year": 1974,
+   "examples": "chemical & process plants",
+   "url": "https://en.wikipedia.org/wiki/Hazard_and_operability_study"
+  },
+  {
+   "name": "PRA/PSA",
+   "full": "Probabilistic Risk Assessment",
+   "author": "Norman Rasmussen (WASH-1400)",
+   "year": 1975,
+   "examples": "nuclear power licensing",
+   "url": "https://en.wikipedia.org/wiki/Probabilistic_risk_assessment"
+  },
+  {
+   "name": "Swiss cheese",
+   "full": "Swiss-cheese model of accidents",
+   "author": "James Reason",
+   "year": 1990,
+   "examples": "aviation; healthcare patient safety",
+   "url": "https://en.wikipedia.org/wiki/Swiss_cheese_model"
+  },
+  {
+   "name": "NAT",
+   "full": "Normal Accident Theory",
+   "author": "Charles Perrow",
+   "year": 1984,
+   "examples": "Three Mile Island; tightly-coupled systems",
+   "url": "https://en.wikipedia.org/wiki/Normal_Accidents"
+  },
+  {
+   "name": "HRO",
+   "full": "High Reliability Organizations",
+   "author": "Weick, Roberts, Rochlin (Berkeley)",
+   "year": 1987,
+   "examples": "aircraft carriers; ATC; nuclear ops",
+   "url": "https://en.wikipedia.org/wiki/High_reliability_organization"
+  },
+  {
+   "name": "AcciMap",
+   "full": "AcciMap / risk management in a dynamic society",
+   "author": "Jens Rasmussen",
+   "year": 1997,
+   "examples": "cross-sector accident analysis",
+   "url": "https://en.wikipedia.org/wiki/Jens_Rasmussen_(human_factors_expert)"
+  },
+  {
+   "name": "STAMP / STPA / CAST",
+   "full": "Systems-Theoretic Accident Model & Processes",
+   "author": "Nancy Leveson (MIT)",
+   "year": 2004,
+   "examples": "aviation, automotive, medical, spacecraft, defense; STPA Handbook 2018",
+   "url": "https://en.wikipedia.org/wiki/Nancy_Leveson"
+  },
+  {
+   "name": "FRAM",
+   "full": "Functional Resonance Analysis Method",
+   "author": "Erik Hollnagel",
+   "year": 2004,
+   "examples": "healthcare; air traffic management",
+   "url": "https://en.wikipedia.org/wiki/Erik_Hollnagel"
+  },
+  {
+   "name": "Safety-I / II",
+   "full": "Safety-I and Safety-II",
+   "author": "Erik Hollnagel",
+   "year": 2014,
+   "examples": "healthcare resilience; safety management",
+   "url": "https://en.wikipedia.org/wiki/Resilience_engineering"
+  },
+  {
+   "name": "Safety-III",
+   "full": "Safety-III: a systems approach",
+   "author": "Nancy Leveson",
+   "year": 2020,
+   "examples": "successor to Safeware; system-safety engineering",
+   "url": "https://psas.scripts.mit.edu/home/nancys-white-papers/"
+  }
+ ]
+}

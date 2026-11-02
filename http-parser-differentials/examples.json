@@ -1,0 +1,93 @@
+{
+ "disclaimer": "Illustrative / schematic. Decisions reflect documented smuggling PATTERNS (Kettle, PortSwigger 2019; HTTP Garden), not live parsing — exact behavior is version- and config-dependent. Cells marked ~ are uncertain. Confirm against HTTP Garden before relying.",
+ "refs": [
+   {"label":"Kettle, HTTP Desync Attacks (2019)","url":"https://portswigger.net/research/http-desync-attacks-request-smuggling-reborn"},
+   {"label":"HTTP Garden (differential harness)","url":"https://github.com/narfindustries/http-garden"}
+ ],
+ "parsers": [
+   {"id":"haproxy","label":"HAProxy","note":"strict proxy"},
+   {"id":"go","label":"Go net/http","note":"strict stdlib"},
+   {"id":"nginx","label":"nginx","note":"server / proxy"},
+   {"id":"node","label":"llhttp (Node)","note":"app runtime"},
+   {"id":"gunicorn","label":"gunicorn","note":"Python WSGI"},
+   {"id":"h11","label":"h11","note":"strict, sans-IO"}
+ ],
+ "interp_legend": {
+   "TE":"frames the body by Transfer-Encoding: chunked",
+   "CL":"frames the body by Content-Length",
+   "CLa":"uses the FIRST of duplicate Content-Length",
+   "reject":"rejects the message (e.g. 400)"
+ },
+ "examples": [
+   {
+     "id":"clte","title":"CL.TE — both Content-Length and Transfer-Encoding",
+     "desc":"Both framing headers present and well-formed. RFC 9112 says Transfer-Encoding wins; a safe server rejects the ambiguity. Lenient servers quietly pick Content-Length — so a TE front-end and a CL back-end disagree on where the request ends.",
+     "lines":[
+       {"t":"POST / HTTP/1.1"},{"t":"Host: example.com"},
+       {"t":"Content-Length: 6","hot":true},{"t":"Transfer-Encoding: chunked","hot":true},
+       {"t":""},{"t":"0"},{"t":""},{"t":"G","body":true}
+     ],
+     "verdicts":{
+       "haproxy":{"interp":"reject","accept":false,"note":"blocks CL+TE"},
+       "go":{"interp":"reject","accept":false,"note":"rejects CL+TE"},
+       "nginx":{"interp":"TE","accept":true,"note":"uses chunked","tilde":true},
+       "node":{"interp":"TE","accept":true,"note":"prefers TE","tilde":true},
+       "gunicorn":{"interp":"CL","accept":true,"note":"uses Content-Length","tilde":true},
+       "h11":{"interp":"reject","accept":false,"note":"strict: both present"}
+     }
+   },
+   {
+     "id":"dupte","title":"TE obfuscation — duplicate Transfer-Encoding",
+     "desc":"A valid chunked header followed by a junk one. Parsers that honor the FIRST see chunked (TE); parsers that honor the LAST see an unknown encoding and fall back to Content-Length (CL). Classic front/back split.",
+     "lines":[
+       {"t":"POST / HTTP/1.1"},{"t":"Host: example.com"},
+       {"t":"Content-Length: 6"},
+       {"t":"Transfer-Encoding: chunked","hot":true},{"t":"Transfer-Encoding: cow","hot":true},
+       {"t":""},{"t":"0"},{"t":""},{"t":"G","body":true}
+     ],
+     "verdicts":{
+       "haproxy":{"interp":"reject","accept":false,"note":"blocks conflicting TE"},
+       "go":{"interp":"reject","accept":false,"note":"rejects bad TE","tilde":true},
+       "nginx":{"interp":"TE","accept":true,"note":"honors first (chunked)","tilde":true},
+       "node":{"interp":"CL","accept":true,"note":"last unknown → CL","tilde":true},
+       "gunicorn":{"interp":"CL","accept":true,"note":"falls back to CL","tilde":true},
+       "h11":{"interp":"reject","accept":false,"note":"strict: dup TE"}
+     }
+   },
+   {
+     "id":"barelf","title":"Bare LF — line ending is \\n, not \\r\\n",
+     "desc":"A header line terminated by a bare LF. Strict parsers reject; lenient ones accept and treat it as a line break — so a smuggled header is invisible to one hop and live to the next.",
+     "lines":[
+       {"t":"POST / HTTP/1.1"},{"t":"Host: example.com"},
+       {"t":"Content-Length: 0"},
+       {"t":"X-Smuggle: a\\nGET /admin HTTP/1.1","hot":true},
+       {"t":""}
+     ],
+     "verdicts":{
+       "haproxy":{"interp":"reject","accept":false,"note":"requires CRLF"},
+       "go":{"interp":"reject","accept":false,"note":"rejects bare LF","tilde":true},
+       "nginx":{"interp":"CL","accept":true,"note":"accepts bare LF","tilde":true},
+       "node":{"interp":"CL","accept":true,"note":"lenient on LF","tilde":true},
+       "gunicorn":{"interp":"CL","accept":true,"note":"accepts bare LF","tilde":true},
+       "h11":{"interp":"reject","accept":false,"note":"strict: CRLF only"}
+     }
+   },
+   {
+     "id":"dupcl","title":"Duplicate Content-Length — different values",
+     "desc":"Two Content-Length headers with different values. The RFC-safe answer is to reject (nearly everyone does). The teaching point: here the methods AGREE on rejecting — no differential, no smuggling.",
+     "lines":[
+       {"t":"POST / HTTP/1.1"},{"t":"Host: example.com"},
+       {"t":"Content-Length: 6","hot":true},{"t":"Content-Length: 5","hot":true},
+       {"t":""},{"t":"ABCDEF","body":true}
+     ],
+     "verdicts":{
+       "haproxy":{"interp":"reject","accept":false,"note":"blocks dup CL"},
+       "go":{"interp":"reject","accept":false,"note":"rejects dup CL"},
+       "nginx":{"interp":"reject","accept":false,"note":"rejects dup CL","tilde":true},
+       "node":{"interp":"reject","accept":false,"note":"rejects dup CL","tilde":true},
+       "gunicorn":{"interp":"CLa","accept":true,"note":"takes first CL","tilde":true},
+       "h11":{"interp":"reject","accept":false,"note":"strict: dup CL"}
+     }
+   }
+ ]
+}

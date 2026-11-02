@@ -1,0 +1,595 @@
+{
+ "case": "Therac-25",
+ "primary": "STPA+CAST",
+ "source": "Leveson & Turner, 'An Investigation of the Therac-25 Accidents', IEEE Computer 1993",
+ "summary": "A radiation therapy machine (1985-87) delivered massive overdoses. No single broken part: a concurrency race between the operator-input task and the setup task, hardware interlocks removed (software 'replaced' them), code reused from the Therac-20 whose bugs were masked by hardware there, and fast operator editing combined to command a high-energy beam while the turntable was in field-light position.",
+ "control_structure": {
+  "nodes": [
+   {
+    "id": "mgmt",
+    "label": "AECL / regulator",
+    "kind": "org",
+    "x": 230,
+    "y": 30
+   },
+   {
+    "id": "operator",
+    "label": "Operator",
+    "kind": "human",
+    "x": 80,
+    "y": 135
+   },
+   {
+    "id": "software",
+    "label": "Treatment software (PDP-11)",
+    "kind": "controller",
+    "x": 250,
+    "y": 130
+   },
+   {
+    "id": "beam",
+    "label": "Beam + turntable",
+    "kind": "actuator",
+    "x": 230,
+    "y": 222
+   },
+   {
+    "id": "patient",
+    "label": "Patient",
+    "kind": "process",
+    "x": 230,
+    "y": 298
+   }
+  ],
+  "edges": [
+   {
+    "from": "mgmt",
+    "to": "software",
+    "kind": "control",
+    "label": "requirements, reused code"
+   },
+   {
+    "from": "operator",
+    "to": "software",
+    "kind": "control",
+    "label": "enter mode + dose (editable)"
+   },
+   {
+    "from": "software",
+    "to": "beam",
+    "kind": "control",
+    "label": "set energy + filter + fire"
+   },
+   {
+    "from": "beam",
+    "to": "patient",
+    "kind": "actuation",
+    "label": "deliver dose"
+   },
+   {
+    "from": "beam",
+    "to": "software",
+    "kind": "feedback",
+    "label": "actual energy/position",
+    "missing": true
+   },
+   {
+    "from": "patient",
+    "to": "operator",
+    "kind": "feedback",
+    "label": "reaction (delayed, ignored)",
+    "weak": true
+   }
+  ]
+ },
+ "steps": [
+  {
+   "id": 1,
+   "paradigm": "STPA",
+   "stage": "0 · purpose & losses",
+   "state": "define the loss to prevent",
+   "focus": {
+    "nodes": [
+     "patient"
+    ],
+    "edges": []
+   },
+   "next_actions": [
+    "name losses (L: patient harmed by radiation)",
+    "name system-level hazards"
+   ],
+   "chosen": "L1 = patient receives unsafe dose",
+   "lean_mapping": {
+    "obligation": "define the bad predicate the whole analysis targets",
+    "lean": "def hazard (s : State) : Prop := s.deliveredDose > s.prescribedDose * safetyFactor"
+   },
+   "outcome": "hazard predicate fixed → everything downstream refers to it",
+   "short": {
+    "t": "The loss",
+    "move": "Name what must never happen",
+    "lean": "def hazard := dose > prescribed·k",
+    "out": "a bad-state to aim at"
+   },
+   "rules": {
+    "S1": "define the forbidden overdose",
+    "S2": "define a safe treatment",
+    "S3": "define hazard as a system state"
+   }
+  },
+  {
+   "id": 2,
+   "paradigm": "STPA",
+   "stage": "1 · model control structure",
+   "state": "components + control/feedback links declared",
+   "focus": {
+    "nodes": [
+     "mgmt",
+     "operator",
+     "software",
+     "beam",
+     "patient"
+    ],
+    "edges": [
+     "software->beam",
+     "beam->software"
+    ]
+   },
+   "next_actions": [
+    "add each controller & controlled process",
+    "check every loop has feedback"
+   ],
+   "chosen": "check feedback → beam→software feedback MISSING",
+   "lean_mapping": {
+    "obligation": "control graph well-formed; every control loop has feedback",
+    "lean": "theorem wf : ∀ l ∈ loops, feedback l ≠ none   -- FAILS at beam→software"
+   },
+   "outcome": "missing feedback flagged (software cannot observe actual turntable state) → prime suspect",
+   "short": {
+    "t": "The control structure",
+    "move": "who commands whom — and the missing feedback",
+    "lean": "∀ loop, feedback ≠ none   — FAILS",
+    "out": "software can't see the turntable"
+   },
+   "rules": {
+    "S1": "operator double-checks mode/dose",
+    "S2": "let the operator see actual machine state",
+    "S3": "every loop needs feedback (turntable position)"
+   }
+  },
+  {
+   "id": 3,
+   "paradigm": "STPA",
+   "stage": "2 · identify control actions",
+   "state": "enumerate the commands software issues",
+   "focus": {
+    "nodes": [
+     "software",
+     "beam"
+    ],
+    "edges": [
+     "software->beam"
+    ]
+   },
+   "next_actions": [
+    "list control actions: set-energy, set-filter, fire-beam"
+   ],
+   "chosen": "focus on set-energy + fire-beam",
+   "lean_mapping": {
+    "obligation": "enumerate the transition labels (actions) of the state machine",
+    "lean": "inductive Action | setEnergy (e:Energy) | setFilter (f:Filter) | fire"
+   },
+   "outcome": "action set fixed → cross with guidewords next",
+   "short": {
+    "t": "The commands",
+    "move": "set-energy · set-filter · fire",
+    "lean": "inductive Action | setEnergy | fire",
+    "out": "actions to stress-test"
+   },
+   "rules": {
+    "S1": "mode/dose entry procedure",
+    "S2": "preserve a way to catch a mis-set energy",
+    "S3": "bound beam energy by verified setup"
+   }
+  },
+  {
+   "id": 4,
+   "paradigm": "STPA",
+   "stage": "3 · unsafe control actions (the grid)",
+   "state": "each action × {not given / given / wrong timing / wrong order}",
+   "focus": {
+    "nodes": [
+     "software"
+    ],
+    "edges": [
+     "software->beam"
+    ]
+   },
+   "next_actions": [
+    "given wrong value: high energy w/ field-light filter",
+    "wrong order: fire before filter set",
+    "wrong timing: edit after setup latched"
+   ],
+   "chosen": "UCA1 = fire high-energy beam while turntable in field-light position",
+   "lean_mapping": {
+    "obligation": "grid coverage (∀ action, a verdict) AND each UCA names a bad state (non-vacuity)",
+    "lean": "def UCA1 (s) := s.turntable = fieldLight ∧ s.energy = high ∧ s.firing\n theorem uca1_bad : UCA1 s → hazard s"
+   },
+   "outcome": "UCA1 (and siblings) identified → become safety constraints",
+   "short": {
+    "t": "Unsafe control action",
+    "move": "fire · high-energy · field-light",
+    "lean": "UCA1 s → hazard s",
+    "out": "the dangerous command"
+   },
+   "rules": {
+    "S1": "don't fire high energy in field-light (procedure)",
+    "S2": "detect the mismatch before firing",
+    "S3": "interlock blocks high energy unless flattener in place"
+   }
+  },
+  {
+   "id": 5,
+   "paradigm": "STPA",
+   "stage": "4a · safety constraint = invariant",
+   "state": "turn UCA1 into constraint C1",
+   "focus": {
+    "nodes": [
+     "software"
+    ],
+    "edges": [
+     "software->beam"
+    ]
+   },
+   "next_actions": [
+    "state the invariant C1",
+    "classify: provable statically or must be monitored?"
+   ],
+   "chosen": "C1 = never fire high energy unless turntable confirmed in beam-flattener position",
+   "lean_mapping": {
+    "obligation": "the constraint excludes the UCA state",
+    "lean": "def C1 (s) := s.firing ∧ s.energy = high → s.turntable = flattener\n theorem c1_excludes : C1 s → ¬ UCA1 s"
+   },
+   "outcome": "C1 is the property whose violation the accident will show",
+   "short": {
+    "t": "The invariant",
+    "move": "high energy ⇒ flattener in place",
+    "lean": "C1 s → ¬ UCA1 s",
+    "out": "the rule the accident breaks"
+   },
+   "rules": {
+    "S1": "operator verifies turntable before firing",
+    "S2": "keep time/feedback to catch the race",
+    "S3": "fire high energy only if turntable=flattener (monitor)"
+   }
+  },
+  {
+   "id": 6,
+   "paradigm": "STPA",
+   "stage": "4b · why would C1 be violated? (causal factors)",
+   "state": "trace how the controller could issue the unsafe action",
+   "focus": {
+    "nodes": [
+     "operator",
+     "software"
+    ],
+    "edges": [
+     "operator->software",
+     "beam->software"
+    ]
+   },
+   "next_actions": [
+    "flawed process model (SW believes turntable set)",
+    "unsafe feedback (no position sensor read)",
+    "concurrency: edit races setup task"
+   ],
+   "chosen": "software's process model diverges from reality via a race",
+   "lean_mapping": {
+    "obligation": "model the controller's belief vs actual; C1 proof needs the belief to track reality",
+    "lean": "theorem c1_needs_feedback : (s.belief.turntable = s.turntable) → C1 s\n  -- discharges ONLY under the (false) feedback assumption"
+   },
+   "outcome": "root factor: C1 provable only if belief=reality, which the missing feedback + race breaks",
+   "short": {
+    "t": "Why it breaks",
+    "move": "belief ≠ reality: a race, no sensor",
+    "lean": "belief = reality → C1   (assumes too much)",
+    "out": "holds only if software sees truth"
+   },
+   "rules": {
+    "S1": "assumed software tracks the turntable",
+    "S2": "fast edits happen — design for them",
+    "S3": "never trust software belief without a sensor"
+   }
+  },
+  {
+   "id": 7,
+   "paradigm": "CAST",
+   "stage": "5 · replay the accident trace",
+   "state": "a concrete fast-edit treatment sequence",
+   "focus": {
+    "nodes": [
+     "operator",
+     "software",
+     "beam",
+     "patient"
+    ],
+    "edges": [
+     "operator->software",
+     "software->beam",
+     "beam->patient"
+    ]
+   },
+   "next_actions": [
+    "construct trace: select X-ray, edit to electron within 8s, setup task already latched",
+    "check which invariant it violates"
+   ],
+   "chosen": "trace reaches firing with energy=high ∧ turntable=fieldLight",
+   "lean_mapping": {
+    "obligation": "the trace is a genuine counterexample to a named invariant",
+    "lean": "theorem accident : ∃ t, reach t ∧ ¬ C1 (state t)   -- CAST = the witness trace"
+   },
+   "outcome": "accident = constructive ¬C1; this is exactly a model-checker counterexample",
+   "short": {
+    "t": "The accident",
+    "move": "fast edit → fire while field-light",
+    "lean": "∃ t, reach t ∧ ¬ C1",
+    "out": "accident = counterexample"
+   },
+   "rules": {
+    "S1": "operator acted normally → overdose",
+    "S2": "no feedback to catch the race",
+    "S3": "counterexample: ¬C1 reachable"
+   }
+  },
+  {
+   "id": 8,
+   "paradigm": "CAST",
+   "stage": "6 · climb the control hierarchy",
+   "state": "why each higher controller allowed it",
+   "focus": {
+    "nodes": [
+     "mgmt",
+     "software"
+    ],
+    "edges": [
+     "mgmt->software"
+    ]
+   },
+   "next_actions": [
+    "AECL: reused Therac-20 code, inadequate test of concurrency",
+    "regulator: no requirement for independent interlock",
+    "safety culture: trusted software over hardware interlock"
+   ],
+   "chosen": "interlocks removed in favor of software; reuse masked by old hardware",
+   "lean_mapping": {
+    "obligation": "the assumption set the proof rests on is explicit and owned",
+    "lean": "axiom feedback_present : ∀ s, s.belief.turntable = s.turntable\n  -- the UNJUSTIFIED assumption; CAST attributes it up the hierarchy"
+   },
+   "outcome": "the false axiom is the organizational cause, made explicit as a named assumption",
+   "short": {
+    "t": "Who allowed it",
+    "move": "reused code · interlocks removed · no reg check",
+    "lean": "axiom feedback_present   -- unearned",
+    "out": "the false assumption, owned upward"
+   },
+   "rules": {
+    "S1": "trusted software over the hardware interlock",
+    "S2": "removed the margin the hardware gave",
+    "S3": "interlock removal = unearned axiom"
+   }
+  },
+  {
+   "id": 9,
+   "paradigm": "STPA",
+   "stage": "7 · fix = enforce the invariant",
+   "state": "choose how to make C1 hold",
+   "focus": {
+    "nodes": [
+     "beam",
+     "software"
+    ],
+    "edges": [
+     "beam->software",
+     "software->beam"
+    ]
+   },
+   "next_actions": [
+    "add position feedback (restore the real sensor)",
+    "hardware interlock (monitor enforces C1)",
+    "prove belief=reality given the new feedback"
+   ],
+   "chosen": "independent hardware interlock = runtime monitor of C1",
+   "lean_mapping": {
+    "obligation": "a monitor enforces a safety property (Schneider: safety ⇒ enforceable)",
+    "lean": "theorem monitor_sound : ∀ s, guard s = allow → C1 s"
+   },
+   "outcome": "C1 now holds by construction; UCA1 unreachable",
+   "short": {
+    "t": "The fix",
+    "move": "independent interlock = runtime monitor",
+    "lean": "guard s = allow → C1 s",
+    "out": "UCA1 now unreachable"
+   },
+   "rules": {
+    "S1": "restore procedures + dose checks",
+    "S2": "restore feedback & time",
+    "S3": "independent hardware interlock (enforced)"
+   }
+  },
+  {
+   "id": 10,
+   "paradigm": "loosening",
+   "stage": "8 · safe loosening check",
+   "state": "ops asks: can we drop the interlock to speed throughput?",
+   "focus": {
+    "nodes": [
+     "beam",
+     "software"
+    ],
+    "edges": [
+     "beam->software"
+    ]
+   },
+   "next_actions": [
+    "propose C1' (weaker) ",
+    "require certificate: does H still hold?",
+    "accept iff provable, else refuse with the hazard"
+   ],
+   "chosen": "refuse: no certificate that hazard-free holds without the interlock",
+   "lean_mapping": {
+    "obligation": "loosening admissible iff weakened constraint still entails the hazard invariant",
+    "lean": "-- SAFE iff provable:  theorem loosen_ok : C1' s → ¬ hazard s\n-- here UNPROVABLE → loosening refused (the exact pre-accident mistake)"
+   },
+   "outcome": "the tool blocks the 1980s decision; shows the re-enabled accident. Ratchet is on H, not on C1.",
+   "short": {
+    "t": "Safe loosening",
+    "move": "drop the interlock for speed? prove H first",
+    "lean": "C1' → ¬ hazard   — UNPROVABLE ⇒ refuse",
+    "out": "blocks the 1980s mistake"
+   },
+   "rules": {
+    "S1": "relax checks only if still safe",
+    "S2": "don't drop the interlock for speed",
+    "S3": "refuse unless H provable without the interlock"
+   }
+  }
+ ],
+ "safety_models": {
+  "S1": {
+   "label": "Safety-I",
+   "tag": "safe IF rules are followed",
+   "note": "compliance: a constraint/procedure that guarantees safety when obeyed",
+   "author": "Erik Hollnagel",
+   "year": "2014 (named)",
+   "cite": "Hollnagel, 'Safety-I and Safety-II' (2014) — the traditional 'absence of accidents' view, named to contrast with Safety-II",
+   "url": "https://en.wikipedia.org/wiki/Erik_Hollnagel"
+  },
+  "S2": {
+   "label": "Safety-II",
+   "tag": "safe BY adapting",
+   "note": "preserve people's capacity to notice and recover under varying conditions",
+   "author": "Erik Hollnagel",
+   "year": "2014",
+   "cite": "Hollnagel, 'Safety-I and Safety-II' (2014); Hollnagel, Wears & Braithwaite, 'From Safety-I to Safety-II: A White Paper' (2015)",
+   "url": "https://en.wikipedia.org/wiki/Resilience_engineering"
+  },
+  "S3": {
+   "label": "Safety-III",
+   "tag": "safe BY design (enforced)",
+   "note": "Leveson: build the control structure so the unsafe action is impossible or monitored",
+   "author": "Nancy Leveson",
+   "year": "2020",
+   "cite": "Leveson, 'Safety-III: A Systems Approach to Safety and Resilience' (MIT white paper, 2020)",
+   "url": "https://psas.scripts.mit.edu/home/nancys-white-papers/"
+  }
+ },
+ "techniques": [
+  {
+   "name": "FMEA",
+   "full": "Failure Mode and Effects Analysis",
+   "author": "US Army (MIL-P-1629)",
+   "year": 1949,
+   "examples": "Apollo; automotive (ISO 26262); aerospace",
+   "url": "https://en.wikipedia.org/wiki/Failure_mode_and_effects_analysis"
+  },
+  {
+   "name": "FTA",
+   "full": "Fault Tree Analysis",
+   "author": "H.A. Watson, Bell Labs (USAF Minuteman)",
+   "year": 1962,
+   "examples": "nuclear (WASH-1400); aerospace",
+   "url": "https://en.wikipedia.org/wiki/Fault_tree_analysis"
+  },
+  {
+   "name": "HAZOP",
+   "full": "Hazard and Operability Study",
+   "author": "ICI / Trevor Kletz",
+   "year": 1974,
+   "examples": "chemical & process plants",
+   "url": "https://en.wikipedia.org/wiki/Hazard_and_operability_study"
+  },
+  {
+   "name": "PRA/PSA",
+   "full": "Probabilistic Risk Assessment",
+   "author": "Norman Rasmussen (WASH-1400)",
+   "year": 1975,
+   "examples": "nuclear power licensing",
+   "url": "https://en.wikipedia.org/wiki/Probabilistic_risk_assessment"
+  },
+  {
+   "name": "Swiss cheese",
+   "full": "Swiss-cheese model of accidents",
+   "author": "James Reason",
+   "year": 1990,
+   "examples": "aviation; healthcare patient safety",
+   "url": "https://en.wikipedia.org/wiki/Swiss_cheese_model"
+  },
+  {
+   "name": "NAT",
+   "full": "Normal Accident Theory",
+   "author": "Charles Perrow",
+   "year": 1984,
+   "examples": "Three Mile Island; tightly-coupled systems",
+   "url": "https://en.wikipedia.org/wiki/Normal_Accidents"
+  },
+  {
+   "name": "HRO",
+   "full": "High Reliability Organizations",
+   "author": "Weick, Roberts, Rochlin (Berkeley)",
+   "year": 1987,
+   "examples": "aircraft carriers; ATC; nuclear ops",
+   "url": "https://en.wikipedia.org/wiki/High_reliability_organization"
+  },
+  {
+   "name": "AcciMap",
+   "full": "AcciMap / risk management in a dynamic society",
+   "author": "Jens Rasmussen",
+   "year": 1997,
+   "examples": "cross-sector accident analysis",
+   "url": "https://en.wikipedia.org/wiki/Jens_Rasmussen_(human_factors_expert)"
+  },
+  {
+   "name": "STAMP / STPA / CAST",
+   "full": "Systems-Theoretic Accident Model & Processes",
+   "author": "Nancy Leveson (MIT)",
+   "year": 2004,
+   "examples": "aviation, automotive, medical, spacecraft, defense; STPA Handbook 2018",
+   "url": "https://en.wikipedia.org/wiki/Nancy_Leveson"
+  },
+  {
+   "name": "FRAM",
+   "full": "Functional Resonance Analysis Method",
+   "author": "Erik Hollnagel",
+   "year": 2004,
+   "examples": "healthcare; air traffic management",
+   "url": "https://en.wikipedia.org/wiki/Erik_Hollnagel"
+  },
+  {
+   "name": "Safety-I / II",
+   "full": "Safety-I and Safety-II",
+   "author": "Erik Hollnagel",
+   "year": 2014,
+   "examples": "healthcare resilience; safety management",
+   "url": "https://en.wikipedia.org/wiki/Resilience_engineering"
+  },
+  {
+   "name": "Safety-III",
+   "full": "Safety-III: a systems approach",
+   "author": "Nancy Leveson",
+   "year": 2020,
+   "examples": "successor to Safeware; system-safety engineering",
+   "url": "https://psas.scripts.mit.edu/home/nancys-white-papers/"
+  }
+ ],
+ "scale": {
+  "this": "1 invariant",
+  "real": "even a small device spec has 10^2–10^3",
+  "note": "safety is the tip; functional + basic-functionality properties are the base",
+  "viz": "../fun-verification/viz/state-space.html"
+ },
+ "meta": {
+  "key": "therac",
+  "label": "Therac-25",
+  "domain": "medical device",
+  "why": "Software trusted to replace the hardware safety interlocks."
+ }
+}

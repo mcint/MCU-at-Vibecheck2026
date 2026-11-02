@@ -1,0 +1,656 @@
+{
+ "case": "Three Mile Island (1979)",
+ "oneliner": "A relief valve stuck open, but the panel light showed it closed — so the operators turned the emergency coolant DOWN. The core uncovered.",
+ "summary": "Unit 2 lost coolant through a pressure-operated relief valve (PORV) that stuck open. The operators' only indication was a light wired to the valve's CLOSE command, not its actual position — so their mental model said 'closed'. Rising indications looked like 'too much water' (going solid), the thing they were trained to avoid, so they throttled High-Pressure Injection (emergency coolant). The core uncovered. No operator was incompetent and the valve-stick alone was survivable; the accident was the interaction of a stuck valve, a lying indicator, and correct-by-training operator action.",
+ "source": "Kemeny Commission (1979); Perrow, Normal Accidents (1984) ch.1",
+ "control_structure": {
+  "nodes": [
+   {
+    "id": "mgmt",
+    "label": "Utility / NRC",
+    "x": 230,
+    "y": 30
+   },
+   {
+    "id": "ops",
+    "label": "Operators",
+    "x": 80,
+    "y": 140
+   },
+   {
+    "id": "panel",
+    "label": "Panel indicator",
+    "x": 400,
+    "y": 140
+   },
+   {
+    "id": "hpi",
+    "label": "HPI (emergency coolant)",
+    "x": 300,
+    "y": 225
+   },
+   {
+    "id": "porv",
+    "label": "PORV (relief valve)",
+    "x": 160,
+    "y": 225
+   },
+   {
+    "id": "core",
+    "label": "Reactor core",
+    "x": 230,
+    "y": 300
+   }
+  ],
+  "edges": [
+   {
+    "from": "mgmt",
+    "to": "ops",
+    "kind": "control",
+    "label": "training: avoid 'going solid'"
+   },
+   {
+    "from": "ops",
+    "to": "hpi",
+    "kind": "control",
+    "label": "throttle / inject"
+   },
+   {
+    "from": "porv",
+    "to": "core",
+    "kind": "actuation",
+    "label": "(stuck open) loses coolant"
+   },
+   {
+    "from": "hpi",
+    "to": "core",
+    "kind": "actuation",
+    "label": "adds coolant"
+   },
+   {
+    "from": "core",
+    "to": "panel",
+    "kind": "feedback",
+    "label": "pressure, level"
+   },
+   {
+    "from": "porv",
+    "to": "panel",
+    "kind": "feedback",
+    "label": "shows COMMAND, not position",
+    "missing": true
+   },
+   {
+    "from": "panel",
+    "to": "ops",
+    "kind": "feedback",
+    "label": "readings (ambiguous)",
+    "weak": true
+   }
+  ]
+ },
+ "steps": [
+  {
+   "id": 1,
+   "driver": "STPA",
+   "stage": "the loss",
+   "short": {
+    "t": "The loss",
+    "move": "core uncovers → fuel damage",
+    "lean": "def hazard := coolant < min",
+    "out": "the bad state to prevent"
+   },
+   "focus": {
+    "nodes": [
+     "core"
+    ],
+    "edges": []
+   },
+   "methods": {
+    "FTA": "top event: core damage",
+    "STPA": "loss L1",
+    "FRAM": "end of a drift"
+   },
+   "state": "define the loss",
+   "next_actions": [
+    "name the loss",
+    "name the hazard"
+   ],
+   "chosen": "hazard = coolant below minimum",
+   "lean_mapping": {
+    "obligation": "fix the bad-state predicate",
+    "lean": "def hazard (s) : Prop := s.coolant < s.min"
+   },
+   "outcome": "everything downstream targets this",
+   "rules": {
+    "S1": "define the forbidden outcome",
+    "S2": "define a good recovery",
+    "S3": "define hazard as a system state"
+   }
+  },
+  {
+   "id": 2,
+   "driver": "STPA",
+   "stage": "control structure",
+   "short": {
+    "t": "Who controls what",
+    "move": "operators ⇄ coolant — and the lying indicator",
+    "lean": "∀ loop, feedback ≠ none  — FAILS",
+    "out": "no true PORV-position feedback"
+   },
+   "focus": {
+    "nodes": [
+     "ops",
+     "panel",
+     "porv",
+     "core"
+    ],
+    "edges": [
+     "porv->panel",
+     "panel->ops"
+    ]
+   },
+   "methods": {
+    "FTA": "— (no failure yet)",
+    "STPA": "draw control + feedback",
+    "FRAM": "functions & couplings"
+   },
+   "state": "components + control/feedback links",
+   "next_actions": [
+    "add controllers & process",
+    "check every loop has feedback"
+   ],
+   "chosen": "flag missing PORV-position feedback",
+   "lean_mapping": {
+    "obligation": "control graph well-formed; loops have feedback",
+    "lean": "theorem wf : ∀ l∈loops, feedback l ≠ none  -- FAILS: porv position"
+   },
+   "outcome": "operators can't see the valve",
+   "rules": {
+    "S1": "procedure: verify the valve by secondary signs",
+    "S2": "give operators true state + authority",
+    "S3": "every loop needs valid (actual-position) feedback"
+   }
+  },
+  {
+   "id": 3,
+   "driver": "STPA",
+   "stage": "control actions",
+   "short": {
+    "t": "The commands",
+    "move": "open/close PORV · throttle HPI",
+    "lean": "inductive Action | throttleHPI | …",
+    "out": "actions to stress-test"
+   },
+   "focus": {
+    "nodes": [
+     "ops",
+     "hpi"
+    ],
+    "edges": [
+     "ops->hpi"
+    ]
+   },
+   "methods": {
+    "FTA": "basic events",
+    "STPA": "control actions",
+    "FRAM": "function variability"
+   },
+   "state": "enumerate commands",
+   "next_actions": [
+    "list control actions"
+   ],
+   "chosen": "focus on throttle-HPI",
+   "lean_mapping": {
+    "obligation": "enumerate transition labels",
+    "lean": "inductive Action | throttleHPI | injectHPI | porvOpen | porvClose"
+   },
+   "outcome": "cross with guidewords next",
+   "rules": {
+    "S1": "HPI-throttle procedure",
+    "S2": "preserve ability to restore coolant fast",
+    "S3": "bound coolant actions by verified inventory"
+   }
+  },
+  {
+   "id": 4,
+   "driver": "STPA",
+   "stage": "unsafe control action",
+   "short": {
+    "t": "The unsafe act",
+    "move": "throttle HPI while coolant is leaking",
+    "lean": "UCA1 s → hazard s",
+    "out": "the dangerous command"
+   },
+   "focus": {
+    "nodes": [
+     "ops",
+     "hpi",
+     "core"
+    ],
+    "edges": [
+     "ops->hpi",
+     "hpi->core"
+    ]
+   },
+   "methods": {
+    "FTA": "AND(valve stuck, op throttles)",
+    "STPA": "unsafe control action",
+    "FRAM": "resonant timing"
+   },
+   "state": "actions × {given/not/timing/order}",
+   "next_actions": [
+    "throttle HPI during loss-of-coolant",
+    "inject too late"
+   ],
+   "chosen": "UCA1 = throttle HPI while inventory dropping",
+   "lean_mapping": {
+    "obligation": "grid coverage + each UCA names a bad state",
+    "lean": "def UCA1 (s) := s.losing ∧ s.hpi = throttled\n theorem uca1_bad : UCA1 s → hazard s"
+   },
+   "outcome": "UCA1 → becomes a constraint",
+   "rules": {
+    "S1": "don't throttle HPI without confirming inventory",
+    "S2": "detect & reverse loss of coolant",
+    "S3": "inhibit HPI throttle while inventory dropping (interlock)"
+   }
+  },
+  {
+   "id": 5,
+   "driver": "STPA",
+   "stage": "safety constraint",
+   "short": {
+    "t": "The invariant",
+    "move": "never throttle HPI while losing coolant",
+    "lean": "C1 s → ¬ UCA1 s",
+    "out": "the rule the accident breaks"
+   },
+   "focus": {
+    "nodes": [
+     "ops",
+     "hpi"
+    ],
+    "edges": [
+     "ops->hpi"
+    ]
+   },
+   "methods": {
+    "FTA": "—",
+    "STPA": "safety constraint",
+    "FRAM": "keep coupling loose"
+   },
+   "state": "UCA1 → constraint C1",
+   "next_actions": [
+    "state invariant",
+    "prove or monitor?"
+   ],
+   "chosen": "state C1",
+   "lean_mapping": {
+    "obligation": "constraint excludes the UCA state",
+    "lean": "def C1 (s) := s.losing → s.hpi ≠ throttled\n theorem c1_excludes : C1 s → ¬ UCA1 s"
+   },
+   "outcome": "C1 is what the accident will violate",
+   "rules": {
+    "S1": "operators: keep HPI on until subcooling confirmed",
+    "S2": "keep margin & time to recognize a loss",
+    "S3": "throttle allowed only if inventory verified (monitor)"
+   }
+  },
+  {
+   "id": 6,
+   "driver": "STPA",
+   "stage": "why it breaks",
+   "short": {
+    "t": "Why it breaks",
+    "move": "light shows 'closed'; valve is open",
+    "lean": "belief = reality → C1   (assumes too much)",
+    "out": "wrong mental model: 'going solid'"
+   },
+   "focus": {
+    "nodes": [
+     "porv",
+     "panel",
+     "ops"
+    ],
+    "edges": [
+     "porv->panel",
+     "panel->ops"
+    ]
+   },
+   "methods": {
+    "FTA": "component fault: PORV",
+    "STPA": "flawed process model",
+    "FRAM": "indication variability"
+   },
+   "state": "trace the controller's belief vs reality",
+   "next_actions": [
+    "bad feedback: command≠position",
+    "operators infer 'too much water'"
+   ],
+   "chosen": "belief diverges via misleading indication",
+   "lean_mapping": {
+    "obligation": "C1 proof needs belief to track reality",
+    "lean": "theorem c1_needs_feedback : (s.belief.porv = s.porv) → C1 s  -- the (false) assumption"
+   },
+   "outcome": "C1 holds only if the light tells the truth",
+   "rules": {
+    "S1": "assumed the valve light = valve state",
+    "S2": "indications were ambiguous — design for it",
+    "S3": "never infer state from a command signal"
+   }
+  },
+  {
+   "id": 7,
+   "driver": "CAST",
+   "stage": "the accident",
+   "short": {
+    "t": "The accident",
+    "move": "valve sticks → read 'closed' → throttle HPI",
+    "lean": "∃ t, reach t ∧ ¬ C1",
+    "out": "accident = counterexample"
+   },
+   "focus": {
+    "nodes": [
+     "ops",
+     "panel",
+     "porv",
+     "hpi",
+     "core"
+    ],
+    "edges": [
+     "porv->core",
+     "porv->panel",
+     "panel->ops",
+     "ops->hpi",
+     "hpi->core"
+    ]
+   },
+   "methods": {
+    "FTA": "a cut set realized",
+    "STPA": "counterexample trace",
+    "FRAM": "resonance peak"
+   },
+   "state": "the real event sequence",
+   "next_actions": [
+    "which invariant does the trace violate?"
+   ],
+   "chosen": "trace reaches losing ∧ hpi=throttled",
+   "lean_mapping": {
+    "obligation": "trace is a genuine counterexample to C1",
+    "lean": "theorem accident : ∃ t, reach t ∧ ¬ C1 (state t)  -- CAST = the witness"
+   },
+   "outcome": "explained as ¬C1, not 'operator error'",
+   "rules": {
+    "S1": "followed 'avoid solid' training → wrong",
+    "S2": "recovery capacity overwhelmed by bad data",
+    "S3": "counterexample: ¬C1 reachable"
+   }
+  },
+  {
+   "id": 8,
+   "driver": "CAST",
+   "stage": "who allowed it",
+   "short": {
+    "t": "Who allowed it",
+    "move": "indicator design · training · ignored precursor",
+    "lean": "axiom feedback_present   -- unearned",
+    "out": "the false assumption, owned upward"
+   },
+   "focus": {
+    "nodes": [
+     "mgmt",
+     "ops",
+     "panel"
+    ],
+    "edges": [
+     "mgmt->ops",
+     "panel->ops"
+    ]
+   },
+   "methods": {
+    "FTA": "out of scope",
+    "STPA": "inadequate control up the chain",
+    "FRAM": "org variability"
+   },
+   "state": "why each higher controller allowed it",
+   "next_actions": [
+    "indicator wired to command",
+    "training to avoid 'solid'",
+    "Davis-Besse precursor not propagated"
+   ],
+   "chosen": "the lying indicator was a design decision",
+   "lean_mapping": {
+    "obligation": "make the proof's assumption explicit and owned",
+    "lean": "axiom feedback_present : ∀ s, s.belief.porv = s.porv  -- attributed up the hierarchy"
+   },
+   "outcome": "the false axiom is the organizational cause",
+   "rules": {
+    "S1": "training emphasized the wrong failure",
+    "S2": "indicator design stripped real feedback",
+    "S3": "command-not-position design = unearned axiom"
+   }
+  },
+  {
+   "id": 9,
+   "driver": "STPA",
+   "stage": "the fix",
+   "short": {
+    "t": "The fix",
+    "move": "indicate ACTUAL valve position",
+    "lean": "guard s = allow → C1 s",
+    "out": "belief = reality restored"
+   },
+   "focus": {
+    "nodes": [
+     "porv",
+     "panel"
+    ],
+    "edges": [
+     "porv->panel"
+    ]
+   },
+   "methods": {
+    "FTA": "add redundancy",
+    "STPA": "restore feedback / monitor",
+    "FRAM": "dampen the coupling"
+   },
+   "state": "choose how to make C1 hold",
+   "next_actions": [
+    "real position sensor",
+    "interlock on HPI throttle"
+   ],
+   "chosen": "true position feedback + HPI interlock",
+   "lean_mapping": {
+    "obligation": "a monitor enforces a safety property (Schneider)",
+    "lean": "theorem monitor_sound : ∀ s, guard s = allow → C1 s"
+   },
+   "outcome": "UCA1 unreachable",
+   "rules": {
+    "S1": "new indications + procedures",
+    "S2": "restore true state, authority, time",
+    "S3": "indicate ACTUAL valve position (enforced)"
+   }
+  },
+  {
+   "id": 10,
+   "driver": "loosening",
+   "stage": "safe loosening",
+   "short": {
+    "t": "Safe loosening",
+    "move": "let operators override HPI? prove H first",
+    "lean": "C1' → ¬ hazard   — UNPROVABLE ⇒ refuse",
+    "out": "blocks the 1979 move"
+   },
+   "focus": {
+    "nodes": [
+     "ops",
+     "hpi"
+    ],
+    "edges": [
+     "ops->hpi"
+    ]
+   },
+   "methods": {
+    "FTA": "lower the failure prob?",
+    "STPA": "prove H before relaxing",
+    "FRAM": "watch for new resonance"
+   },
+   "state": "ops wants manual override of emergency coolant",
+   "next_actions": [
+    "propose weaker C1'",
+    "demand certificate H still holds",
+    "accept iff provable"
+   ],
+   "chosen": "refuse: no certificate without true feedback",
+   "lean_mapping": {
+    "obligation": "loosening admissible iff weakened constraint still entails H",
+    "lean": "-- SAFE iff provable: theorem loosen_ok : C1' s → ¬ hazard s\n-- UNPROVABLE here ⇒ refused (the 1979 mistake)"
+   },
+   "outcome": "ratchet is on H, not on C1",
+   "rules": {
+    "S1": "relax the HPI rule only if inventory still safe",
+    "S2": "don't remove recovery margin",
+    "S3": "refuse unless H provable without the signal"
+   }
+  }
+ ],
+ "safety_models": {
+  "S1": {
+   "label": "Safety-I",
+   "tag": "safe IF rules are followed",
+   "note": "compliance: a constraint/procedure that guarantees safety when obeyed",
+   "author": "Erik Hollnagel",
+   "year": "2014 (named)",
+   "cite": "Hollnagel, 'Safety-I and Safety-II' (2014) — the traditional 'absence of accidents' view, named to contrast with Safety-II",
+   "url": "https://en.wikipedia.org/wiki/Erik_Hollnagel"
+  },
+  "S2": {
+   "label": "Safety-II",
+   "tag": "safe BY adapting",
+   "note": "preserve people's capacity to notice and recover under varying conditions",
+   "author": "Erik Hollnagel",
+   "year": "2014",
+   "cite": "Hollnagel, 'Safety-I and Safety-II' (2014); Hollnagel, Wears & Braithwaite, 'From Safety-I to Safety-II: A White Paper' (2015)",
+   "url": "https://en.wikipedia.org/wiki/Resilience_engineering"
+  },
+  "S3": {
+   "label": "Safety-III",
+   "tag": "safe BY design (enforced)",
+   "note": "Leveson: build the control structure so the unsafe action is impossible or monitored",
+   "author": "Nancy Leveson",
+   "year": "2020",
+   "cite": "Leveson, 'Safety-III: A Systems Approach to Safety and Resilience' (MIT white paper, 2020)",
+   "url": "https://psas.scripts.mit.edu/home/nancys-white-papers/"
+  }
+ },
+ "techniques": [
+  {
+   "name": "FMEA",
+   "full": "Failure Mode and Effects Analysis",
+   "author": "US Army (MIL-P-1629)",
+   "year": 1949,
+   "examples": "Apollo; automotive (ISO 26262); aerospace",
+   "url": "https://en.wikipedia.org/wiki/Failure_mode_and_effects_analysis"
+  },
+  {
+   "name": "FTA",
+   "full": "Fault Tree Analysis",
+   "author": "H.A. Watson, Bell Labs (USAF Minuteman)",
+   "year": 1962,
+   "examples": "nuclear (WASH-1400); aerospace",
+   "url": "https://en.wikipedia.org/wiki/Fault_tree_analysis"
+  },
+  {
+   "name": "HAZOP",
+   "full": "Hazard and Operability Study",
+   "author": "ICI / Trevor Kletz",
+   "year": 1974,
+   "examples": "chemical & process plants",
+   "url": "https://en.wikipedia.org/wiki/Hazard_and_operability_study"
+  },
+  {
+   "name": "PRA/PSA",
+   "full": "Probabilistic Risk Assessment",
+   "author": "Norman Rasmussen (WASH-1400)",
+   "year": 1975,
+   "examples": "nuclear power licensing",
+   "url": "https://en.wikipedia.org/wiki/Probabilistic_risk_assessment"
+  },
+  {
+   "name": "Swiss cheese",
+   "full": "Swiss-cheese model of accidents",
+   "author": "James Reason",
+   "year": 1990,
+   "examples": "aviation; healthcare patient safety",
+   "url": "https://en.wikipedia.org/wiki/Swiss_cheese_model"
+  },
+  {
+   "name": "NAT",
+   "full": "Normal Accident Theory",
+   "author": "Charles Perrow",
+   "year": 1984,
+   "examples": "Three Mile Island; tightly-coupled systems",
+   "url": "https://en.wikipedia.org/wiki/Normal_Accidents"
+  },
+  {
+   "name": "HRO",
+   "full": "High Reliability Organizations",
+   "author": "Weick, Roberts, Rochlin (Berkeley)",
+   "year": 1987,
+   "examples": "aircraft carriers; ATC; nuclear ops",
+   "url": "https://en.wikipedia.org/wiki/High_reliability_organization"
+  },
+  {
+   "name": "AcciMap",
+   "full": "AcciMap / risk management in a dynamic society",
+   "author": "Jens Rasmussen",
+   "year": 1997,
+   "examples": "cross-sector accident analysis",
+   "url": "https://en.wikipedia.org/wiki/Jens_Rasmussen_(human_factors_expert)"
+  },
+  {
+   "name": "STAMP / STPA / CAST",
+   "full": "Systems-Theoretic Accident Model & Processes",
+   "author": "Nancy Leveson (MIT)",
+   "year": 2004,
+   "examples": "aviation, automotive, medical, spacecraft, defense; STPA Handbook 2018",
+   "url": "https://en.wikipedia.org/wiki/Nancy_Leveson"
+  },
+  {
+   "name": "FRAM",
+   "full": "Functional Resonance Analysis Method",
+   "author": "Erik Hollnagel",
+   "year": 2004,
+   "examples": "healthcare; air traffic management",
+   "url": "https://en.wikipedia.org/wiki/Erik_Hollnagel"
+  },
+  {
+   "name": "Safety-I / II",
+   "full": "Safety-I and Safety-II",
+   "author": "Erik Hollnagel",
+   "year": 2014,
+   "examples": "healthcare resilience; safety management",
+   "url": "https://en.wikipedia.org/wiki/Resilience_engineering"
+  },
+  {
+   "name": "Safety-III",
+   "full": "Safety-III: a systems approach",
+   "author": "Nancy Leveson",
+   "year": 2020,
+   "examples": "successor to Safeware; system-safety engineering",
+   "url": "https://psas.scripts.mit.edu/home/nancys-white-papers/"
+  }
+ ],
+ "scale": {
+  "this": "1 invariant",
+  "real": "a reactor protection system has ~10^4–10^5",
+  "note": "safety invariants sit atop far more functional ones",
+  "viz": "../fun-verification/viz/state-space.html"
+ },
+ "meta": {
+  "key": "3mi",
+  "label": "Three Mile Island",
+  "domain": "nuclear",
+  "why": "A feedback signal that lied: the light showed the valve closed; it was open."
+ }
+}

@@ -1,0 +1,21 @@
+{
+  "leanContracts": {
+    "repository": "https://github.com/tripp-smith/leancontracts",
+    "commit": "b9fc2e85897774decd01126f1b2e6a943adabd91",
+    "license": "Apache-2.0",
+    "use": "Original Basic and Semantics modules, compiled and executed as a runtime cross-check."
+  },
+  "catala": {
+    "repository": "https://github.com/CatalaLang/catala-examples",
+    "commit": "9e251b932288cf5f4a74af072d203144a057494b",
+    "license": "Apache-2.0",
+    "use": "Original section_132 source; displayed source-case port, Catala compiler not run."
+  },
+  "sha256": {
+    "vendor/catala/section_132.catala_en": "7ddc97b09f3f2b7f9604507cfcb62f9110f7ff817d4dc01c5b23428de3476984",
+    "vendor/catala/LICENSE.txt": "cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30",
+    "vendor/LeanContracts/LICENSE": "fd57e6c04db7d062f2d43ad3c85e84aa083b9edfb59312a307168614345b97c7",
+    "vendor/LeanContracts/Semantics.lean": "2371b413e25a472541383bfa4c6c9394e890416c1a5c79b9232990eaedba373b",
+    "vendor/LeanContracts/Basic.lean": "2c7af631f9ef178da24022b00b0cf47ab21211cedc0e5aea3b4a670f2c57cc98"
+  }
+}

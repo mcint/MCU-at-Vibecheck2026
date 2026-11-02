@@ -1,0 +1,219 @@
+<!doctype html><html lang=en><head><meta charset=utf-8>
+<meta name=viewport content="width=device-width,initial-scale=1">
+<title>HTTP parser differentials — who sees what</title>
+<style>
+:root{--ink:#1b1b1b;--dim:#808080;--acc:#0a6cff;--in:#2b6cb0;--inbg:#eaf2fb;--good:#17a673;--goodbg:#e8f7f0;--bad:#e0444f;--badbg:#fdeceD;--warn:#c8860a;--line:#e6e6e6;--bg:#fff;--card:#f7f7f8}
+@media(prefers-color-scheme:dark){:root{--ink:#eaeaea;--dim:#9aa;--acc:#6ab0ff;--in:#7fb4ec;--inbg:#17283d;--good:#3cc38a;--goodbg:#10291f;--bad:#ef6a73;--badbg:#2e1416;--warn:#e0a53a;--line:#2c2c2c;--bg:#131313;--card:#1b1b1b}}
+*{box-sizing:border-box}html{color-scheme:light dark}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.5 system-ui,sans-serif;max-width:1000px;margin:0 auto;padding:0 1rem 3rem}
+header{padding:1rem 0 .3rem}h1{font-size:1.25rem;margin:0}.sub{color:var(--dim);font-size:.85rem}
+.ex{display:flex;gap:.35rem;flex-wrap:wrap;margin:.7rem 0}
+.ex button{font:inherit;font-size:.82rem;border:1px solid var(--line);background:var(--card);color:var(--ink);border-radius:8px;padding:.2rem .6rem;cursor:pointer}
+.ex button.on{background:var(--acc);color:#fff;border-color:var(--acc)}
+.desc{color:var(--dim);font-size:.9rem;margin:.2rem 0 .8rem}
+.lbl{font-size:.68rem;text-transform:uppercase;letter-spacing:.06em;font-weight:600;margin:.2rem 0}
+.lbl.in{color:var(--in)}.lbl.out{color:var(--acc)}
+.cols{display:grid;grid-template-columns:1fr 1.25fr;gap:1rem}
+@media(max-width:780px){.cols{grid-template-columns:1fr}}
+.inbox{border:1.5px solid var(--in);background:var(--inbg);border-radius:10px;padding:.6rem .8rem;font-family:ui-monospace,Menlo,monospace;font-size:.86rem;white-space:pre;overflow:auto}
+.inbox .crlf{color:var(--in);opacity:.55}
+.inbox .hot{background:color-mix(in srgb,var(--warn) 28%,transparent);border-radius:3px;font-weight:600}
+.inbox .body{color:var(--dim)}
+table.out{border-collapse:collapse;width:100%;font-size:.86rem}
+table.out th,table.out td{border:1px solid var(--line);padding:.32rem .5rem;text-align:left;vertical-align:middle}
+table.out th{background:var(--card);font-size:.72rem;text-transform:uppercase;letter-spacing:.04em;color:var(--dim)}
+.parser b{color:var(--ink)}.parser small{color:var(--dim);font-weight:400}
+.dec{font-weight:700;font-family:ui-monospace,Menlo,monospace}
+.dec.te,.dec.cl,.dec.cla{color:var(--good)}
+.rej td{background:var(--badbg)}.rej .dec{color:var(--bad)}
+.acc{color:var(--dim);font-size:.82rem}
+.tilde{color:var(--warn)}
+.legend{display:flex;gap:1rem;flex-wrap:wrap;font-size:.76rem;color:var(--dim);margin:.6rem 0}
+.sw{display:inline-block;width:.8rem;height:.8rem;border-radius:3px;vertical-align:-1px;margin-right:.25rem;border:1px solid var(--line)}
+details.mx{margin-top:1rem;border:1px solid var(--line);border-radius:10px}
+details.mx>summary{cursor:pointer;padding:.6rem .9rem;font-weight:600}
+details.mx .inner{padding:0 .9rem .9rem}
+table.m{border-collapse:collapse;font-size:.78rem}
+table.m th,table.m td{border:1px solid var(--line);padding:.3rem .4rem;text-align:center}
+table.m th{background:var(--card);font-weight:600}
+table.m th.rowh{text-align:right}
+td.agree{background:var(--goodbg);color:var(--good)}
+td.desync{background:var(--badbg);color:var(--bad);font-weight:700}
+td.blocked{background:var(--card);color:var(--dim)}
+td.self{background:repeating-linear-gradient(45deg,transparent,transparent 4px,var(--line) 4px,var(--line) 5px)}
+.note{font-size:.78rem;color:var(--dim);margin-top:.6rem}.note a{color:var(--acc)}
+.disc{font-size:.78rem;color:var(--warn);border:1px dashed var(--warn);border-radius:8px;padding:.4rem .6rem;margin:.5rem 0}
+</style></head><body>
+<header><h1>HTTP parser differentials — <span style="color:var(--dim);font-weight:400">who sees what in one crafted request</span></h1>
+<div class="sub">Two parsers, one input, two meanings → request smuggling. Pick an example; see each parser's decision; open the front-end × back-end matrix to see which pairings desync.</div></header>
+<div class="disc" id="disc"></div>
+<div class="ex" id="ex"></div>
+<div class="desc" id="desc"></div>
+<div class="cols">
+ <div><div class="lbl in">input · crafted request</div><div class="inbox" id="inbox"></div>
+  <div class="legend">
+   <span><span class="sw" style="background:var(--inbg);border-color:var(--in)"></span>input</span>
+   <span><span class="sw" style="background:var(--goodbg);border-color:var(--good)"></span>accepted decision</span>
+   <span><span class="sw" style="background:var(--badbg);border-color:var(--bad)"></span>rejected (400)</span>
+   <span><span class="sw" style="background:color-mix(in srgb,var(--warn) 28%,transparent)"></span>conflicting bytes</span>
+   <span><span class="tilde">~</span> uncertain</span>
+  </div></div>
+ <div><div class="lbl out">output · each parser's decision</div>
+  <table class="out"><thead><tr><th>parser</th><th>decision</th><th>frames body by</th></tr></thead><tbody id="rows"></tbody></table>
+ </div>
+</div>
+<details class="mx"><summary>▸ front-end × back-end matrix — which pairings desync on this input</summary>
+ <div class="inner">
+  <p class="note">Row = front-end (first hop) · Column = back-end (second hop). <b class="dec" style="color:var(--bad)">DESYNC</b> = the two frame the request differently and neither rejects → smuggling. <span style="color:var(--good)">agree</span> = same framing. <span style="color:var(--dim)">blocked</span> = at least one rejects (safe).</p>
+  <table class="m" id="mtab"></table>
+ </div>
+</details>
+<div class="note" id="refs"></div>
+<script id="data" type="application/json">{
+ "disclaimer": "Illustrative / schematic. Decisions reflect documented smuggling PATTERNS (Kettle, PortSwigger 2019; HTTP Garden), not live parsing — exact behavior is version- and config-dependent. Cells marked ~ are uncertain. Confirm against HTTP Garden before relying.",
+ "refs": [
+   {"label":"Kettle, HTTP Desync Attacks (2019)","url":"https://portswigger.net/research/http-desync-attacks-request-smuggling-reborn"},
+   {"label":"HTTP Garden (differential harness)","url":"https://github.com/narfindustries/http-garden"}
+ ],
+ "parsers": [
+   {"id":"haproxy","label":"HAProxy","note":"strict proxy"},
+   {"id":"go","label":"Go net/http","note":"strict stdlib"},
+   {"id":"nginx","label":"nginx","note":"server / proxy"},
+   {"id":"node","label":"llhttp (Node)","note":"app runtime"},
+   {"id":"gunicorn","label":"gunicorn","note":"Python WSGI"},
+   {"id":"h11","label":"h11","note":"strict, sans-IO"}
+ ],
+ "interp_legend": {
+   "TE":"frames the body by Transfer-Encoding: chunked",
+   "CL":"frames the body by Content-Length",
+   "CLa":"uses the FIRST of duplicate Content-Length",
+   "reject":"rejects the message (e.g. 400)"
+ },
+ "examples": [
+   {
+     "id":"clte","title":"CL.TE — both Content-Length and Transfer-Encoding",
+     "desc":"Both framing headers present and well-formed. RFC 9112 says Transfer-Encoding wins; a safe server rejects the ambiguity. Lenient servers quietly pick Content-Length — so a TE front-end and a CL back-end disagree on where the request ends.",
+     "lines":[
+       {"t":"POST / HTTP/1.1"},{"t":"Host: example.com"},
+       {"t":"Content-Length: 6","hot":true},{"t":"Transfer-Encoding: chunked","hot":true},
+       {"t":""},{"t":"0"},{"t":""},{"t":"G","body":true}
+     ],
+     "verdicts":{
+       "haproxy":{"interp":"reject","accept":false,"note":"blocks CL+TE"},
+       "go":{"interp":"reject","accept":false,"note":"rejects CL+TE"},
+       "nginx":{"interp":"TE","accept":true,"note":"uses chunked","tilde":true},
+       "node":{"interp":"TE","accept":true,"note":"prefers TE","tilde":true},
+       "gunicorn":{"interp":"CL","accept":true,"note":"uses Content-Length","tilde":true},
+       "h11":{"interp":"reject","accept":false,"note":"strict: both present"}
+     }
+   },
+   {
+     "id":"dupte","title":"TE obfuscation — duplicate Transfer-Encoding",
+     "desc":"A valid chunked header followed by a junk one. Parsers that honor the FIRST see chunked (TE); parsers that honor the LAST see an unknown encoding and fall back to Content-Length (CL). Classic front/back split.",
+     "lines":[
+       {"t":"POST / HTTP/1.1"},{"t":"Host: example.com"},
+       {"t":"Content-Length: 6"},
+       {"t":"Transfer-Encoding: chunked","hot":true},{"t":"Transfer-Encoding: cow","hot":true},
+       {"t":""},{"t":"0"},{"t":""},{"t":"G","body":true}
+     ],
+     "verdicts":{
+       "haproxy":{"interp":"reject","accept":false,"note":"blocks conflicting TE"},
+       "go":{"interp":"reject","accept":false,"note":"rejects bad TE","tilde":true},
+       "nginx":{"interp":"TE","accept":true,"note":"honors first (chunked)","tilde":true},
+       "node":{"interp":"CL","accept":true,"note":"last unknown → CL","tilde":true},
+       "gunicorn":{"interp":"CL","accept":true,"note":"falls back to CL","tilde":true},
+       "h11":{"interp":"reject","accept":false,"note":"strict: dup TE"}
+     }
+   },
+   {
+     "id":"barelf","title":"Bare LF — line ending is \\n, not \\r\\n",
+     "desc":"A header line terminated by a bare LF. Strict parsers reject; lenient ones accept and treat it as a line break — so a smuggled header is invisible to one hop and live to the next.",
+     "lines":[
+       {"t":"POST / HTTP/1.1"},{"t":"Host: example.com"},
+       {"t":"Content-Length: 0"},
+       {"t":"X-Smuggle: a\\nGET /admin HTTP/1.1","hot":true},
+       {"t":""}
+     ],
+     "verdicts":{
+       "haproxy":{"interp":"reject","accept":false,"note":"requires CRLF"},
+       "go":{"interp":"reject","accept":false,"note":"rejects bare LF","tilde":true},
+       "nginx":{"interp":"CL","accept":true,"note":"accepts bare LF","tilde":true},
+       "node":{"interp":"CL","accept":true,"note":"lenient on LF","tilde":true},
+       "gunicorn":{"interp":"CL","accept":true,"note":"accepts bare LF","tilde":true},
+       "h11":{"interp":"reject","accept":false,"note":"strict: CRLF only"}
+     }
+   },
+   {
+     "id":"dupcl","title":"Duplicate Content-Length — different values",
+     "desc":"Two Content-Length headers with different values. The RFC-safe answer is to reject (nearly everyone does). The teaching point: here the methods AGREE on rejecting — no differential, no smuggling.",
+     "lines":[
+       {"t":"POST / HTTP/1.1"},{"t":"Host: example.com"},
+       {"t":"Content-Length: 6","hot":true},{"t":"Content-Length: 5","hot":true},
+       {"t":""},{"t":"ABCDEF","body":true}
+     ],
+     "verdicts":{
+       "haproxy":{"interp":"reject","accept":false,"note":"blocks dup CL"},
+       "go":{"interp":"reject","accept":false,"note":"rejects dup CL"},
+       "nginx":{"interp":"reject","accept":false,"note":"rejects dup CL","tilde":true},
+       "node":{"interp":"reject","accept":false,"note":"rejects dup CL","tilde":true},
+       "gunicorn":{"interp":"CLa","accept":true,"note":"takes first CL","tilde":true},
+       "h11":{"interp":"reject","accept":false,"note":"strict: dup CL"}
+     }
+   }
+ ]
+}
+</script>
+<script>
+const D=JSON.parse(document.getElementById('data').textContent),P=D.parsers,EX=D.examples;
+let ei=0;
+const esc=s=>(s||'').replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));
+const pid=id=>P.find(p=>p.id===id);
+document.getElementById('disc').textContent='⚠ '+D.disclaimer;
+document.getElementById('refs').innerHTML='sources: '+D.refs.map(r=>`<a href="${esc(r.url)}" target="_blank">${esc(r.label)} ↗</a>`).join(' · ');
+function renderInput(e){
+ let s='';
+ for(const ln of e.lines){
+   if(ln.body){s+=`<span class="body">${esc(ln.t)}</span>\n`;continue;}
+   const t=esc(ln.t).replace(/\\n/g,'<span class="crlf">\\n</span>');
+   const crlf='<span class="crlf">␍␊</span>';
+   s+=(ln.hot?`<span class="hot">${t}</span>`:t)+crlf+'\n';
+ }
+ document.getElementById('inbox').innerHTML=s;
+}
+function renderRows(e){
+ document.getElementById('rows').innerHTML=P.map(p=>{
+   const v=e.verdicts[p.id],rej=!v.accept;
+   const dec=rej?'REJECT':v.interp;
+   const frames=rej?'—':(v.interp==='CLa'?'first Content-Length':v.interp==='CL'?'Content-Length':v.interp==='TE'?'Transfer-Encoding':'—');
+   return `<tr class="${rej?'rej':''}"><td class="parser"><b>${esc(p.label)}</b> <small>${esc(p.note)}</small></td>`+
+     `<td><span class="dec ${v.interp.toLowerCase()}">${esc(dec)}</span>${v.tilde?' <span class="tilde">~</span>':''}<div class="acc">${esc(v.note)}</div></td>`+
+     `<td class="acc">${frames}</td></tr>`;
+ }).join('');
+}
+function cell(a,b){ // a=FE, b=BE interps
+ if(a==='reject'||b==='reject')return['blocked','blocked'];
+ if(a===b)return['agree','agree'];
+ return['desync','DESYNC'];
+}
+function renderMatrix(e){
+ let s='<tr><th class="rowh">FE ↓ · BE →</th>'+P.map(p=>`<th>${esc(p.label)}</th>`).join('')+'</tr>';
+ for(const fe of P){
+   s+=`<tr><th class="rowh">${esc(fe.label)}</th>`;
+   for(const be of P){
+     if(fe.id===be.id){s+='<td class="self"></td>';continue;}
+     const[c,txt]=cell(e.verdicts[fe.id].interp,e.verdicts[be.id].interp);
+     s+=`<td class="${c}">${c==='desync'?txt:c}</td>`;
+   }
+   s+='</tr>';
+ }
+ document.getElementById('mtab').innerHTML=s;
+}
+function render(){
+ const e=EX[ei];
+ document.getElementById('ex').innerHTML=EX.map((x,k)=>`<button class="${k===ei?'on':''}" data-k=${k}>${esc(x.title.split(' — ')[0])}</button>`).join('');
+ document.querySelectorAll('#ex button').forEach(b=>b.onclick=()=>{ei=+b.dataset.k;render()});
+ document.getElementById('desc').innerHTML='<b>'+esc(e.title)+'</b> — '+esc(e.desc);
+ renderInput(e);renderRows(e);renderMatrix(e);
+}
+render();
+</script></body></html>

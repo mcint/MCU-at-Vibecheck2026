@@ -1,0 +1,612 @@
+{
+ "case": "Boeing 737 MAX · MCAS (2018–19)",
+ "oneliner": "One angle-of-attack sensor glitched, so the automation kept pushing the nose down — and the pilots couldn't out-trim it.",
+ "summary": "MCAS trimmed the stabilizer nose-down based on a SINGLE angle-of-attack sensor. A faulty sensor made it fire repeatedly, with more authority than the pilots' counter-trim, re-triggering each time they responded. Certification assumed crews would diagnose it as ordinary runaway trim within seconds; training was minimized to keep a common type rating. Lion Air 610 and Ethiopian 302 were lost. No single broken part explains it: a sensor fault + single-sensor authority + hidden system + training economics + certification assumptions.",
+ "source": "US House T&I Committee Final Report (2020); JATR (2019)",
+ "safety_models": {
+  "S1": {
+   "label": "Safety-I",
+   "tag": "safe IF rules are followed",
+   "note": "compliance: a constraint/procedure that guarantees safety when obeyed",
+   "author": "Erik Hollnagel",
+   "year": "2014 (named)",
+   "cite": "Hollnagel, 'Safety-I and Safety-II' (2014) — the traditional 'absence of accidents' view, named to contrast with Safety-II",
+   "url": "https://en.wikipedia.org/wiki/Erik_Hollnagel"
+  },
+  "S2": {
+   "label": "Safety-II",
+   "tag": "safe BY adapting",
+   "note": "preserve people's capacity to notice and recover under varying conditions",
+   "author": "Erik Hollnagel",
+   "year": "2014",
+   "cite": "Hollnagel, 'Safety-I and Safety-II' (2014); Hollnagel, Wears & Braithwaite, 'From Safety-I to Safety-II: A White Paper' (2015)",
+   "url": "https://en.wikipedia.org/wiki/Resilience_engineering"
+  },
+  "S3": {
+   "label": "Safety-III",
+   "tag": "safe BY design (enforced)",
+   "note": "Leveson: build the control structure so the unsafe action is impossible or monitored",
+   "author": "Nancy Leveson",
+   "year": "2020",
+   "cite": "Leveson, 'Safety-III: A Systems Approach to Safety and Resilience' (MIT white paper, 2020)",
+   "url": "https://psas.scripts.mit.edu/home/nancys-white-papers/"
+  }
+ },
+ "control_structure": {
+  "nodes": [
+   {
+    "id": "mgmt",
+    "label": "Boeing / FAA",
+    "x": 230,
+    "y": 30
+   },
+   {
+    "id": "pilots",
+    "label": "Pilots",
+    "x": 80,
+    "y": 135
+   },
+   {
+    "id": "mcas",
+    "label": "MCAS",
+    "x": 250,
+    "y": 120
+   },
+   {
+    "id": "aoa",
+    "label": "AoA sensor (1 of 2)",
+    "x": 405,
+    "y": 135
+   },
+   {
+    "id": "stab",
+    "label": "Stabilizer trim",
+    "x": 230,
+    "y": 220
+   },
+   {
+    "id": "ac",
+    "label": "Aircraft pitch",
+    "x": 230,
+    "y": 298
+   }
+  ],
+  "edges": [
+   {
+    "from": "mgmt",
+    "to": "mcas",
+    "kind": "control",
+    "label": "design + cert assumptions"
+   },
+   {
+    "from": "mgmt",
+    "to": "pilots",
+    "kind": "control",
+    "label": "training (minimized)"
+   },
+   {
+    "from": "pilots",
+    "to": "stab",
+    "kind": "control",
+    "label": "manual trim / cutout"
+   },
+   {
+    "from": "mcas",
+    "to": "stab",
+    "kind": "control",
+    "label": "auto nose-down trim"
+   },
+   {
+    "from": "stab",
+    "to": "ac",
+    "kind": "actuation",
+    "label": "pitch"
+   },
+   {
+    "from": "aoa",
+    "to": "mcas",
+    "kind": "feedback",
+    "label": "single AoA, no cross-check",
+    "missing": true
+   },
+   {
+    "from": "ac",
+    "to": "pilots",
+    "kind": "feedback",
+    "label": "forces, stick-shaker"
+   }
+  ]
+ },
+ "steps": [
+  {
+   "id": 1,
+   "driver": "STPA",
+   "stage": "the loss",
+   "short": {
+    "t": "The loss",
+    "move": "uncommanded nose-down into terrain",
+    "lean": "def hazard := pitch < safeMin",
+    "out": "the bad state to prevent"
+   },
+   "focus": {
+    "nodes": [
+     "ac"
+    ],
+    "edges": []
+   },
+   "rules": {
+    "S1": "define the forbidden outcome",
+    "S2": "define what a good recovery looks like",
+    "S3": "define the hazard as a system state"
+   },
+   "state": "define the loss",
+   "next_actions": [
+    "name loss",
+    "name hazard"
+   ],
+   "chosen": "hazard = uncommanded nose-down",
+   "lean_mapping": {
+    "obligation": "fix the bad-state predicate",
+    "lean": "def hazard (s) : Prop := s.pitch < safeMin"
+   },
+   "outcome": "everything downstream targets this"
+  },
+  {
+   "id": 2,
+   "driver": "STPA",
+   "stage": "control structure",
+   "short": {
+    "t": "Who controls what",
+    "move": "MCAS trims the stabilizer — on one sensor",
+    "lean": "∀ loop, feedback valid  — FAILS",
+    "out": "single-sensor authority, no cross-check"
+   },
+   "focus": {
+    "nodes": [
+     "pilots",
+     "mcas",
+     "aoa",
+     "stab"
+    ],
+    "edges": [
+     "aoa->mcas",
+     "mcas->stab"
+    ]
+   },
+   "rules": {
+    "S1": "procedure: cross-check airspeed/AoA",
+    "S2": "pilots must keep authority + info to recover",
+    "S3": "every control loop needs valid feedback (design)"
+   },
+   "state": "components + control/feedback links",
+   "next_actions": [
+    "draw controllers & process",
+    "check feedback validity"
+   ],
+   "chosen": "flag single-sensor feedback",
+   "lean_mapping": {
+    "obligation": "control graph well-formed; feedback trustworthy",
+    "lean": "theorem wf : ∀ l∈loops, trusted (feedback l)  -- FAILS: single AoA"
+   },
+   "outcome": "MCAS trusts one sensor it can't cross-check"
+  },
+  {
+   "id": 3,
+   "driver": "STPA",
+   "stage": "control actions",
+   "short": {
+    "t": "The commands",
+    "move": "MCAS nose-down · pilot trim/cutout",
+    "lean": "inductive Action | mcasTrimDown | …",
+    "out": "actions to stress-test"
+   },
+   "focus": {
+    "nodes": [
+     "mcas",
+     "stab",
+     "pilots"
+    ],
+    "edges": [
+     "mcas->stab",
+     "pilots->stab"
+    ]
+   },
+   "rules": {
+    "S1": "runaway-trim memory drill",
+    "S2": "preserve manual-trim capability",
+    "S3": "bound automation authority by design"
+   },
+   "state": "enumerate commands",
+   "next_actions": [
+    "list control actions"
+   ],
+   "chosen": "focus on MCAS nose-down trim",
+   "lean_mapping": {
+    "obligation": "enumerate transition labels",
+    "lean": "inductive Action | mcasTrimDown | pilotTrimUp | stabCutout"
+   },
+   "outcome": "cross with guidewords next"
+  },
+  {
+   "id": 4,
+   "driver": "STPA",
+   "stage": "unsafe control action",
+   "short": {
+    "t": "The unsafe act",
+    "move": "MCAS trims down on a bad sensor, repeatedly",
+    "lean": "UCA1 s → hazard s",
+    "out": "the dangerous command"
+   },
+   "focus": {
+    "nodes": [
+     "mcas",
+     "stab",
+     "ac"
+    ],
+    "edges": [
+     "mcas->stab",
+     "stab->ac"
+    ]
+   },
+   "rules": {
+    "S1": "don't trim down on unreliable AoA (procedure)",
+    "S2": "detect & disable misbehaving automation",
+    "S3": "MCAS cannot trim beyond X without valid AoA (interlock)"
+   },
+   "state": "actions × {given/not/timing/order}",
+   "next_actions": [
+    "trim down on invalid AoA",
+    "re-trigger after pilot trims up"
+   ],
+   "chosen": "UCA1 = MCAS nose-down on single faulty AoA, high authority",
+   "lean_mapping": {
+    "obligation": "grid coverage + each UCA names a bad state",
+    "lean": "def UCA1 (s) := ¬valid s.aoa ∧ s.mcas = trimDown\n theorem uca1_bad : UCA1 s → hazard s"
+   },
+   "outcome": "UCA1 → becomes a constraint"
+  },
+  {
+   "id": 5,
+   "driver": "STPA",
+   "stage": "safety constraint",
+   "short": {
+    "t": "The invariant",
+    "move": "no auto nose-down unless AoA valid & pilot can override",
+    "lean": "C1 s → ¬ UCA1 s",
+    "out": "the rule the accident breaks"
+   },
+   "focus": {
+    "nodes": [
+     "mcas",
+     "stab"
+    ],
+    "edges": [
+     "mcas->stab"
+    ]
+   },
+   "rules": {
+    "S1": "pilots: if trim runs away, hit the cutout switches",
+    "S2": "keep enough control margin & time to diagnose",
+    "S3": "MCAS trims only if both AoA agree AND override works (monitor)"
+   },
+   "state": "UCA1 → constraint C1",
+   "next_actions": [
+    "state invariant",
+    "prove or monitor?"
+   ],
+   "chosen": "state C1",
+   "lean_mapping": {
+    "obligation": "constraint excludes the UCA state",
+    "lean": "def C1 (s) := s.mcas = trimDown → (valid s.aoa ∧ s.pilotCanOverride)\n theorem c1_excludes : C1 s → ¬ UCA1 s"
+   },
+   "outcome": "C1 is what the accident will violate"
+  },
+  {
+   "id": 6,
+   "driver": "STPA",
+   "stage": "why it breaks",
+   "short": {
+    "t": "Why it breaks",
+    "move": "one sensor → MCAS 'believes' high AoA; it re-fires",
+    "lean": "belief = reality → C1  (assumes too much)",
+    "out": "single-sensor model + re-trigger + 4s cert assumption"
+   },
+   "focus": {
+    "nodes": [
+     "aoa",
+     "mcas",
+     "pilots"
+    ],
+    "edges": [
+     "aoa->mcas",
+     "ac->pilots"
+    ]
+   },
+   "rules": {
+    "S1": "assumed crews run the drill in ~4s",
+    "S2": "but startle & workload vary — design for it",
+    "S3": "never let one sensor define the process model"
+   },
+   "state": "controller belief vs reality",
+   "next_actions": [
+    "bad feedback: single AoA",
+    "re-trigger defeats counter-trim",
+    "cert assumes fast diagnosis"
+   ],
+   "chosen": "belief diverges via single faulty sensor",
+   "lean_mapping": {
+    "obligation": "C1 proof needs belief to track reality",
+    "lean": "theorem c1_needs_feedback : (s.belief.aoa = s.aoa) → C1 s  -- the (false) assumption"
+   },
+   "outcome": "C1 holds only if the sensor tells the truth"
+  },
+  {
+   "id": 7,
+   "driver": "CAST",
+   "stage": "the accident",
+   "short": {
+    "t": "The accident",
+    "move": "bad AoA → trim down → pilots fight → re-trigger",
+    "lean": "∃ t, reach t ∧ ¬ C1",
+    "out": "accident = counterexample"
+   },
+   "focus": {
+    "nodes": [
+     "aoa",
+     "mcas",
+     "stab",
+     "pilots",
+     "ac"
+    ],
+    "edges": [
+     "aoa->mcas",
+     "mcas->stab",
+     "stab->ac",
+     "ac->pilots",
+     "pilots->stab"
+    ]
+   },
+   "rules": {
+    "S1": "drill partly done, defeated by re-trigger",
+    "S2": "adaptive capacity exhausted by repetition",
+    "S3": "counterexample: ¬C1 is reachable"
+   },
+   "state": "the real event sequence",
+   "next_actions": [
+    "which invariant does the trace violate?"
+   ],
+   "chosen": "trace reaches ¬valid AoA ∧ trimDown, repeatedly",
+   "lean_mapping": {
+    "obligation": "trace is a genuine counterexample to C1",
+    "lean": "theorem accident : ∃ t, reach t ∧ ¬ C1 (state t)  -- CAST = the witness"
+   },
+   "outcome": "explained as ¬C1, not 'foreign pilots'"
+  },
+  {
+   "id": 8,
+   "driver": "CAST",
+   "stage": "who allowed it",
+   "short": {
+    "t": "Who allowed it",
+    "move": "single sensor · hidden MCAS · no sim · delegated cert",
+    "lean": "axiom feedback_present  -- unearned",
+    "out": "the false assumption, owned upward"
+   },
+   "focus": {
+    "nodes": [
+     "mgmt",
+     "mcas",
+     "pilots"
+    ],
+    "edges": [
+     "mgmt->mcas",
+     "mgmt->pilots"
+    ]
+   },
+   "rules": {
+    "S1": "training minimized to keep the type rating",
+    "S2": "the org removed pilots' recovery capacity",
+    "S3": "cert assumptions became unearned axioms"
+   },
+   "state": "why each higher controller allowed it",
+   "next_actions": [
+    "single-sensor design",
+    "MCAS undisclosed",
+    "FAA ODA delegation",
+    "training economics"
+   ],
+   "chosen": "commonality pressure drove the unsafe design",
+   "lean_mapping": {
+    "obligation": "make the proof's assumption explicit and owned",
+    "lean": "axiom feedback_present : ∀ s, s.belief.aoa = s.aoa  -- attributed up the hierarchy"
+   },
+   "outcome": "the false axiom is the organizational cause"
+  },
+  {
+   "id": 9,
+   "driver": "STPA",
+   "stage": "the fix",
+   "short": {
+    "t": "The fix",
+    "move": "use BOTH AoA; disagree ⇒ MCAS off; limit authority",
+    "lean": "guard s = allow → C1 s",
+    "out": "belief = reality; pilot can always override"
+   },
+   "focus": {
+    "nodes": [
+     "aoa",
+     "mcas",
+     "stab"
+    ],
+    "edges": [
+     "aoa->mcas",
+     "mcas->stab"
+    ]
+   },
+   "rules": {
+    "S1": "new procedures + mandatory training",
+    "S2": "restore authority, information, time",
+    "S3": "dual-AoA disagree → MCAS inhibited (enforced)"
+   },
+   "state": "choose how to make C1 hold",
+   "next_actions": [
+    "cross-check both sensors",
+    "cap authority, single activation",
+    "disclose + train"
+   ],
+   "chosen": "dual-AoA cross-check + authority limit + override",
+   "lean_mapping": {
+    "obligation": "a monitor enforces a safety property (Schneider)",
+    "lean": "theorem monitor_sound : ∀ s, guard s = allow → C1 s"
+   },
+   "outcome": "UCA1 unreachable"
+  },
+  {
+   "id": 10,
+   "driver": "loosening",
+   "stage": "safe loosening",
+   "short": {
+    "t": "Safe loosening",
+    "move": "skip sim training for commonality? prove H first",
+    "lean": "C1' → ¬ hazard  — UNPROVABLE ⇒ refuse",
+    "out": "blocks the real 2017 decision"
+   },
+   "focus": {
+    "nodes": [
+     "mgmt",
+     "pilots"
+    ],
+    "edges": [
+     "mgmt->pilots"
+    ]
+   },
+   "rules": {
+    "S1": "drop training only if the drill still suffices (it didn't)",
+    "S2": "never remove recovery margin to save cost",
+    "S3": "refuse the loosening unless H is provable without it"
+   },
+   "state": "Boeing wants no-sim commonality",
+   "next_actions": [
+    "propose weaker C1'",
+    "demand certificate H still holds",
+    "accept iff provable"
+   ],
+   "chosen": "refuse: no certificate that safety holds without training/cross-check",
+   "lean_mapping": {
+    "obligation": "loosening admissible iff weakened constraint still entails H",
+    "lean": "-- SAFE iff provable: theorem loosen_ok : C1' s → ¬ hazard s\n-- UNPROVABLE here ⇒ refused (the 2017 mistake)"
+   },
+   "outcome": "ratchet is on H, not on the training/commonality constraint"
+  }
+ ],
+ "techniques": [
+  {
+   "name": "FMEA",
+   "full": "Failure Mode and Effects Analysis",
+   "author": "US Army (MIL-P-1629)",
+   "year": 1949,
+   "examples": "Apollo; automotive (ISO 26262); aerospace",
+   "url": "https://en.wikipedia.org/wiki/Failure_mode_and_effects_analysis"
+  },
+  {
+   "name": "FTA",
+   "full": "Fault Tree Analysis",
+   "author": "H.A. Watson, Bell Labs (USAF Minuteman)",
+   "year": 1962,
+   "examples": "nuclear (WASH-1400); aerospace",
+   "url": "https://en.wikipedia.org/wiki/Fault_tree_analysis"
+  },
+  {
+   "name": "HAZOP",
+   "full": "Hazard and Operability Study",
+   "author": "ICI / Trevor Kletz",
+   "year": 1974,
+   "examples": "chemical & process plants",
+   "url": "https://en.wikipedia.org/wiki/Hazard_and_operability_study"
+  },
+  {
+   "name": "PRA/PSA",
+   "full": "Probabilistic Risk Assessment",
+   "author": "Norman Rasmussen (WASH-1400)",
+   "year": 1975,
+   "examples": "nuclear power licensing",
+   "url": "https://en.wikipedia.org/wiki/Probabilistic_risk_assessment"
+  },
+  {
+   "name": "Swiss cheese",
+   "full": "Swiss-cheese model of accidents",
+   "author": "James Reason",
+   "year": 1990,
+   "examples": "aviation; healthcare patient safety",
+   "url": "https://en.wikipedia.org/wiki/Swiss_cheese_model"
+  },
+  {
+   "name": "NAT",
+   "full": "Normal Accident Theory",
+   "author": "Charles Perrow",
+   "year": 1984,
+   "examples": "Three Mile Island; tightly-coupled systems",
+   "url": "https://en.wikipedia.org/wiki/Normal_Accidents"
+  },
+  {
+   "name": "HRO",
+   "full": "High Reliability Organizations",
+   "author": "Weick, Roberts, Rochlin (Berkeley)",
+   "year": 1987,
+   "examples": "aircraft carriers; ATC; nuclear ops",
+   "url": "https://en.wikipedia.org/wiki/High_reliability_organization"
+  },
+  {
+   "name": "AcciMap",
+   "full": "AcciMap / risk management in a dynamic society",
+   "author": "Jens Rasmussen",
+   "year": 1997,
+   "examples": "cross-sector accident analysis",
+   "url": "https://en.wikipedia.org/wiki/Jens_Rasmussen_(human_factors_expert)"
+  },
+  {
+   "name": "STAMP / STPA / CAST",
+   "full": "Systems-Theoretic Accident Model & Processes",
+   "author": "Nancy Leveson (MIT)",
+   "year": 2004,
+   "examples": "aviation, automotive, medical, spacecraft, defense; STPA Handbook 2018",
+   "url": "https://en.wikipedia.org/wiki/Nancy_Leveson"
+  },
+  {
+   "name": "FRAM",
+   "full": "Functional Resonance Analysis Method",
+   "author": "Erik Hollnagel",
+   "year": 2004,
+   "examples": "healthcare; air traffic management",
+   "url": "https://en.wikipedia.org/wiki/Erik_Hollnagel"
+  },
+  {
+   "name": "Safety-I / II",
+   "full": "Safety-I and Safety-II",
+   "author": "Erik Hollnagel",
+   "year": 2014,
+   "examples": "healthcare resilience; safety management",
+   "url": "https://en.wikipedia.org/wiki/Resilience_engineering"
+  },
+  {
+   "name": "Safety-III",
+   "full": "Safety-III: a systems approach",
+   "author": "Nancy Leveson",
+   "year": 2020,
+   "examples": "successor to Safeware; system-safety engineering",
+   "url": "https://psas.scripts.mit.edu/home/nancys-white-papers/"
+  }
+ ],
+ "scale": {
+  "this": "1 invariant",
+  "real": "a flight-control system has ~10^5–10^6",
+  "note": "safety invariants are the tip — beneath them sit functional-correctness and basic-functionality properties; the count explodes by orders of magnitude",
+  "viz": "../fun-verification/viz/state-space.html"
+ },
+ "meta": {
+  "key": "737",
+  "label": "737 MAX · MCAS",
+  "domain": "aviation",
+  "why": "Automation with authority over the pilots, trusting a single sensor."
+ }
+}

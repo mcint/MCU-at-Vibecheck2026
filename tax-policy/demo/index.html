@@ -1,0 +1,212 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Maya's $1 raise — the 2026 ACA cliff, checked in Lean</title>
+<style>
+:root{--bg:#f7f3ea;--card:#fffdf7;--ink:#1d2a27;--mut:#5c6a66;--line:#d9d2c3;--red:#c2402f;--green:#2f7d4f;--amber:#b7791f;--blue:#2b5f9e;--code:#17221f}
+*{box-sizing:border-box}html,body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.45 -apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif}
+a{color:var(--blue)}button{font:inherit;cursor:pointer;border-radius:8px;border:1px solid var(--line);background:#fff;padding:6px 12px;color:var(--ink)}
+button.primary{background:var(--ink);color:#fff;border-color:var(--ink)}button:disabled{opacity:.45;cursor:default}
+header{display:flex;align-items:center;gap:14px;padding:10px 18px;border-bottom:1px solid var(--line);background:var(--card)}
+header h1{font-size:17px;margin:0;letter-spacing:.2px}header .sub{color:var(--mut);font-size:13px;white-space:nowrap}
+#standalone{position:fixed;top:8px;right:12px;font-size:12px;background:var(--card);border:1px solid var(--line);border-radius:999px;padding:3px 10px;z-index:9;text-decoration:none}
+body.embed header{display:none}
+#explainer{margin:12px 18px 0;background:#fff8e3;border:1px solid #ecd9a3;border-radius:10px;padding:10px 14px;font-size:14px}
+#explainer p{margin:4px 0}#explainer .row{display:flex;justify-content:space-between;align-items:center;gap:10px}
+#explainer b{font-size:13px;letter-spacing:.4px;text-transform:uppercase;color:#7a5a12}#explainer.hidden{display:none}
+main{display:grid;grid-template-columns:1.1fr .9fr;gap:14px;padding:12px 18px 18px;max-width:1400px;margin:0 auto}
+@media(max-width:860px){main{grid-template-columns:1fr}}
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px 14px}
+.steps{display:flex;gap:6px;flex-wrap:wrap;margin:0 0 8px;padding:0;list-style:none}
+.steps li{font-size:12px;padding:3px 9px;border-radius:999px;border:1px solid var(--line);color:var(--mut);cursor:pointer;user-select:none}
+.steps li.on{background:var(--ink);color:#fff;border-color:var(--ink)}
+.nav{display:flex;gap:8px;align-items:center;margin-top:10px}.nav .cap{flex:1;color:var(--mut);font-size:13px}
+.eyebrow{font-size:11px;letter-spacing:.8px;text-transform:uppercase;color:var(--mut)}
+h2{margin:2px 0 6px;font-size:22px}
+.delta{font-weight:600}.delta.bad{color:var(--red)}.delta.ok{color:var(--green)}
+.pair{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:8px 0}
+.tile{border:1px solid var(--line);border-radius:10px;padding:8px 10px;background:#fff}
+.tile .eyebrow{display:block;margin-bottom:2px}.tile .v{font-size:22px;font-weight:700}.tile.cur{border-top:3px solid var(--red)}.tile.prop{border-top:3px solid var(--green)}
+.tile .sm{font-size:12px;color:var(--mut)}
+svg{width:100%;height:auto;display:block;background:#fff;border:1px solid var(--line);border-radius:8px}
+.axis{font-size:11px;fill:var(--mut)}.legend{display:flex;gap:14px;font-size:12px;color:var(--mut);margin:4px 0;flex-wrap:wrap}
+.legend i{display:inline-block;width:18px;height:3px;vertical-align:middle;margin-right:4px}
+.slider{display:grid;grid-template-columns:auto 1fr auto auto;gap:8px;align-items:center;margin-top:6px;font-size:13px}
+.slider input[type=range]{width:100%}.slider input[type=number]{width:96px;font:inherit;padding:3px 6px;border:1px solid var(--line);border-radius:6px}
+pre{background:var(--code);color:#e9f0ea;border-radius:8px;padding:9px 11px;font:12px/1.4 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;overflow:auto;margin:6px 0;white-space:pre}
+pre .k{color:#9ad1ff}pre .c{color:#8fb38f}
+.thm{border-left:4px solid var(--line);padding-left:8px;margin:8px 0;transition:opacity .3s}.thm.lit{border-color:var(--green)}.thm.red{border-color:var(--red)}
+.thm .t{font-size:13px;margin:0 0 2px}.badge{display:inline-block;font-size:11px;padding:1px 7px;border-radius:999px;border:1px solid var(--line);color:var(--mut);margin-left:6px}
+.badge.ok{background:#e4f3e9;border-color:#9ccfae;color:var(--green)}.badge.lean{background:#e6eefb;border-color:#a9c3ea;color:var(--blue)}.badge.warn{background:#fff3d6;border-color:#ebcc85;color:var(--amber)}
+.axiom{font-size:11.5px;color:#cfd9d3}
+.foot{font-size:12px;color:var(--mut);margin-top:8px}
+details{font-size:13px;margin-top:6px}summary{cursor:pointer;color:var(--blue)}
+.src{font-size:12.5px;color:var(--mut)}
+#status{font-size:12px;color:var(--mut)}
+.pulse{animation:pulse .6s ease}@keyframes pulse{0%{transform:scale(1)}30%{transform:scale(1.08)}100%{transform:scale(1)}}
+</style></head><body>
+<a id="standalone" href="index.html" target="_blank" rel="noopener">open standalone ↗</a>
+<header><h1>Maya's $1 raise — the 2026 ACA premium-tax-credit cliff, computed and kernel-checked in Lean 4</h1><span class="sub">Policy Lab · tax rules as code · <a id="fullLab" href="../web/index.html">full lab</a></span></header>
+<section id="explainer"><div class="row"><b>Quick read (20 s)</b><button id="skipBtn">skip</button></div>
+<p><strong>What you're looking at:</strong> a real 2026 federal rule. Marketplace premium tax credits stop at 400% of the poverty line ($62,600). Maya earns exactly that; a $1 raise ends her $141/month credit — a <em>cliff</em> that costs $1,691/year.</p>
+<p><strong>What's proven:</strong> the rule is written as a 5-line Lean function. Lean proves <code>current_has_cliff</code> (∃ an income where $1 costs $141/mo) and, for a hypothetical taper repair, <code>proposed_no_cliff</code>: <em>for every income</em>, a $1 raise never raises the premium by more than $1/mo. No <code>sorry</code>, no <code>native_decide</code>; the <code>#print axioms</code> output is shown verbatim.</p>
+<p><strong>How to attack it:</strong> drag the MAGI slider or type any income (0–200,000). The tiles re-run through the compiled Lean binary when the local server is up (badge says "native Lean"); otherwise a JS mirror of the same definitions. Try to find an income where the green rule jumps by more than $1.</p></section>
+<main>
+<div class="card" id="left">
+<ol class="steps" id="steps"></ol>
+<span class="eyebrow">Real 2026 federal rule · representative household · hypothetical repair</span>
+<h2 id="title"></h2><p id="body" style="margin:0 0 4px"></p>
+<div class="pair">
+<div class="tile cur"><span class="eyebrow">Current 2026 law · premium after credit</span><div class="v" id="curV">—</div><div class="sm" id="curS"></div></div>
+<div class="tile prop" id="propTile"><span class="eyebrow">Hypothetical taper · premium after credit</span><div class="v" id="propV">—</div><div class="sm" id="propS"></div></div>
+</div>
+<svg id="chart" viewBox="0 0 640 230" role="img" aria-label="Annual MAGI versus monthly premium after credit"></svg>
+<div class="legend"><span><i style="background:var(--red)"></i>2026 law</span><span id="legProp"><i style="background:var(--green)"></i>taper (hypothetical)</span><span style="margin-left:auto">x: annual MAGI · y: monthly premium after credit · <button id="zoom" style="padding:1px 7px;font-size:11px">zoom: ±$150</button></span></div>
+<div class="slider"><label for="magi">MAGI $</label><input id="magi" type="range" min="40000" max="80000" step="1" value="62600"><input id="magiN" type="number" min="0" max="200000" step="1" value="62600" aria-label="MAGI, any value 0 to 200000"><button id="raise" class="primary" title="Add $1 to MAGI">+$1 raise</button></div>
+<div class="nav"><button id="prev">← prev</button><button id="next" class="primary">next →</button><span class="cap" id="cap"></span><span id="status"></span></div>
+</div>
+<div class="card" id="right">
+<span class="eyebrow">Lean · TaxGame/Interdomain.lean (Lean 4.35.0, no Mathlib)</span>
+<div id="leanLive"></div>
+<pre id="defs"><span class="c">/-- Federal PTC in the modeled 300–400% FPL band. Eligibility above 400% is zero. -/</span>
+<span class="k">def</span> currentCredit (income : Nat) : Nat :=
+  <span class="k">if</span> income &lt; lowerModeledIncome <span class="k">then</span> 0
+  <span class="k">else if</span> income ≤ cutoffIncome <span class="k">then</span> benchmarkPremium - monthlyContribution income
+  <span class="k">else</span> 0
+<span class="c">-- Hypothetical: keep the cutoff credit, taper it to zero over the next half-FPL ($7,825).</span>
+<span class="k">def</span> proposedCredit (income : Nat) : Nat :=
+  <span class="k">if</span> income &lt; lowerModeledIncome <span class="k">then</span> 0
+  <span class="k">else if</span> income ≤ cutoffIncome <span class="k">then</span> currentCredit income
+  <span class="k">else</span>
+    <span class="k">let</span> initial := currentCredit cutoffIncome
+    <span class="k">let</span> width := povertyGuideline / 2
+    <span class="k">let</span> reduction := min initial (((income - cutoffIncome) * initial) / width)
+    initial - reduction</pre>
+<div class="thm red" id="thmCliff"><p class="t"><strong>Current law has a cliff</strong> <span class="badge">∃ · witness 62600</span></p>
+<pre><span class="k">theorem</span> current_has_cliff :
+    ∃ income, currentPremiumPaid (income + 1) = currentPremiumPaid income + 141 :=
+  ⟨cutoffIncome, <span class="k">by</span> decide⟩
+<span class="axiom">'TaxGame.Interdomain.current_has_cliff' does not depend on any axioms</span></pre></div>
+<div class="thm lit" id="thmNoCliff"><p class="t"><strong>Repair has no cliff — for every income</strong> <span class="badge ok">∀ income : Nat</span><span class="badge" id="liveCheck"></span></p>
+<pre><span class="k">theorem</span> proposed_no_cliff (income : Nat) :
+    proposedPremiumPaid (income + 1) ≤ proposedPremiumPaid income + 1 := <span class="k">by</span>
+  <span class="k">have</span> hb := proposed_credit_bounded income
+  <span class="k">have</span> hl := proposed_credit_lipschitz income
+  <span class="k">unfold</span> proposedPremiumPaid
+  omega
+<span class="axiom">'TaxGame.Interdomain.proposed_no_cliff' depends on axioms: [propext, Quot.sound]</span></pre></div>
+<details><summary>More theorems on screen: the exact boundary (decide), "zero above cutoff" (∀), the Lipschitz lemma</summary>
+<pre><span class="k">theorem</span> real_cutoff_cliff :
+    currentCredit cutoffIncome = 141 ∧
+    currentCredit (cutoffIncome + 1) = 0 ∧
+    currentPremiumPaid (cutoffIncome + 1) - currentPremiumPaid cutoffIncome = 141 := <span class="k">by</span>
+  decide
+<span class="axiom">'TaxGame.Interdomain.real_cutoff_cliff' does not depend on any axioms</span>
+
+<span class="k">theorem</span> current_credit_zero_above_cutoff (income : Nat) (h : cutoffIncome &lt; income) :
+    currentCredit income = 0
+<span class="axiom">'TaxGame.Interdomain.current_credit_zero_above_cutoff' depends on axioms: [propext, Quot.sound]</span>
+
+<span class="k">theorem</span> proposed_credit_lipschitz (income : Nat) :
+    proposedCredit income ≤ proposedCredit (income + 1) + 1
+<span class="c">-- proof: closed arithmetic form (proposedCredit_arith), four case splits, omega.</span></pre></details>
+<details><summary>What is NOT proven</summary><p class="src">Lean proves the encoded arithmetic (constants: FPL $15,650, 9.96% band rate, $661 KFF Texas benchmark, Form 8962 rounding), not Maya's personal eligibility, other income taxes, local plan prices, or that the taper is good policy. The cliff is in IRS rules; this demo did not discover it. The taper is hypothetical. <code>proposed_no_cliff</code> bounds the <em>monthly premium</em> step at $1 per $1 of annual income — it does not say net annual income is monotone (a $1/mo step is $12/yr).</p></details>
+<p class="foot">Sources: <a href="https://www.irs.gov/affordable-care-act/individuals-and-families/questions-and-answers-on-the-premium-tax-credit">IRS PTC Q&amp;A</a> · <a href="https://www.irs.gov/irb/2025-32_IRB">Rev. Proc. 2025-25</a> · <a href="https://www.kff.org/affordable-care-act/state-indicator/marketplace-average-benchmark-premiums/">KFF 2026 benchmarks</a> · <code>lake build</code> prints every <code>#print axioms</code> line above.</p>
+</div>
+</main>
+<script>
+(function(){
+'use strict';
+// ---- JS mirror of TaxGame/Interdomain.lean (whole-dollar Nat arithmetic) ----
+var FPL=15650, LOW=3*FPL, CUT=4*FPL, PREM=661, BP=996, WIDTH=Math.floor(FPL/2);
+function roundDiv(a,d){return Math.floor((a+Math.floor(d/2))/d);}
+function annual(i){return roundDiv(i*BP,10000);} function monthly(i){return roundDiv(annual(i),12);}
+function cur(i){return i<LOW?0:(i<=CUT?PREM-monthly(i):0);}
+var INIT=cur(CUT);
+function prop(i){return i<LOW?0:(i<=CUT?cur(i):INIT-Math.min(INIT,Math.floor(((i-CUT)*INIT)/WIDTH)));}
+function curPay(i){return PREM-cur(i);} function propPay(i){return PREM-prop(i);}
+function $(id){return document.getElementById(id);} function fmt(n){return '$'+n.toLocaleString('en-US');}
+var q=new URLSearchParams(location.search);
+if(q.get('embed')==='1')document.body.classList.add('embed');
+q.delete('embed'); var qs=q.toString(); $('standalone').href=location.pathname+(qs?'?'+qs:'');
+if(location.protocol!=='file:')$('fullLab').href='/?policy=income';
+// explainer skip, remembered
+var KEY='taxgame.skipExplainer';
+try{if(localStorage.getItem(KEY)==='1')$('explainer').classList.add('hidden');}catch(e){}
+$('skipBtn').onclick=function(){$('explainer').classList.add('hidden');try{localStorage.setItem(KEY,'1');}catch(e){}};
+// ---- scenes ----
+var SCENES=[
+ {k:'Meet Maya',income:CUT,showProp:false,wide:false,cap:'Scene 1 · Maya earns $62,600 (exactly 400% FPL): credit $141/mo, premium $520/mo. Would you take a $1 raise?',
+  title:'Maya gets a $1 raise. Should she take it?',
+  body:'Maya is 40, single, and buys the benchmark Silver plan on the Texas Marketplace. Projected 2026 MAGI: <b>$62,600</b>. The federal credit covers $141 of her $661 monthly premium. Her boss offers a $1 raise.'},
+ {k:'Take the raise',income:CUT+1,showProp:false,wide:false,cap:'Scene 2 · At $62,601 the credit is $0: premium jumps $520 → $661, i.e. $1,692/yr more, for $1 more income.',
+  title:'She takes it. Her premium jumps $141 a month.',
+  body:'MAGI is now <b>$62,601</b> — $1 over 400% of the poverty line. Under current 2026 law the credit ends entirely. Same plan, <b>$661/month</b>. Over a year: <b>−$1,691</b> net of the raise. That is the cliff. (The 2021–25 expansion had no cutoff; 2026 restores it.)'},
+ {k:'Repair the rule',income:CUT+1,showProp:true,wide:false,cap:'Scene 3 · Hypothetical taper: keep the $141 credit at the line, fade it to $0 over the next $7,825. Same raise, premium still $520.',
+  title:'A hypothetical repair: taper instead of cliff.',
+  body:'Keep the cutoff credit and shrink it linearly to zero over the next half-FPL ($7,825) of income. Green curve. Maya\'s $1 raise now leaves her premium at <b>$520</b>. This is a policy experiment written in Lean, not law.'},
+ {k:'What Lean proves',income:CUT,showProp:true,wide:true,cap:'Scene 4 · Two theorems: current law ∃ a $141 cliff (witness 62600); the repair has no cliff ∀ income. #print axioms: propext, Quot.sound only.',
+  title:'Current law: ∃ cliff. Repair: ∀ income, no cliff.',
+  body:'Both rules are Lean functions on ℕ (right). <code>current_has_cliff</code> exhibits the $141 jump. <code>proposed_no_cliff</code> is a genuine ∀: for <em>every</em> income, a $1 raise raises the monthly premium by at most $1 (taper slope 141/7825 &lt; 1). Kernel-checked at <code>lake build</code>; no <code>sorry</code>, no <code>native_decide</code>.'},
+ {k:'Attack it',income:66000,showProp:true,wide:true,cap:'Scene 5 · Your turn: drag the slider, type any MAGI, or hit +$1 repeatedly. Each point re-runs through the compiled Lean binary when the server is up.',
+  title:'Try to break it.',
+  body:'Pick any MAGI from $0 to $200,000. The tiles show both rules at your income and at income+1. The badge on <code>proposed_no_cliff</code> is the theorem instance checked at your point; the zoom button shows the whole taper. Find a green step bigger than $1 and you have refuted a kernel-checked theorem.'}
+];
+var scene=0, zoomWide=false, showProp=false;
+var stepsEl=$('steps');
+SCENES.forEach(function(s,i){var li=document.createElement('li');li.textContent=(i+1)+' · '+s.k;li.onclick=function(){go(i);};stepsEl.appendChild(li);});
+function go(i){scene=Math.max(0,Math.min(SCENES.length-1,i));var s=SCENES[scene];
+ Array.prototype.forEach.call(stepsEl.children,function(li,j){li.classList.toggle('on',j===scene);});
+ $('title').textContent=s.title;$('body').innerHTML=s.body;$('cap').textContent=s.cap;
+ showProp=s.showProp;$('propTile').style.visibility=showProp?'':'hidden';$('legProp').style.display=showProp?'':'none';
+ $('thmNoCliff').style.opacity=showProp?1:.4;
+ $('prev').disabled=scene===0;$('next').disabled=scene===SCENES.length-1;
+ zoomWide=s.wide;$('zoom').textContent=zoomWide?'zoom: wide':'zoom: ±$150';
+ setIncome(s.income,scene===1);}
+$('prev').onclick=function(){go(scene-1);};$('next').onclick=function(){go(scene+1);};
+document.addEventListener('keydown',function(e){if(/INPUT|TEXTAREA/.test(e.target.tagName))return;if(e.key==='ArrowRight')go(scene+1);if(e.key==='ArrowLeft')go(scene-1);});
+// ---- income / live evaluation ----
+var income=CUT, liveTimer=null;
+function setIncome(i,pulse){income=Math.max(0,Math.min(200000,i|0));$('magi').value=income;$('magiN').value=income;render();
+ if(pulse){var v=$('curV');v.classList.remove('pulse');void v.offsetWidth;v.classList.add('pulse');}queryLean();}
+$('magi').oninput=function(e){setIncome(+e.target.value);};$('magiN').onchange=function(e){setIncome(+e.target.value);};
+$('raise').onclick=function(){setIncome(income+1,true);};
+$('zoom').onclick=function(){zoomWide=!zoomWide;$('zoom').textContent=zoomWide?'zoom: wide':'zoom: ±$150';render();};
+function sign(d){return (d>=0?'+':'')+d;}
+function render(){
+ if(!zoomWide&&(income<CUT-150||income>CUT+150)){zoomWide=true;$('zoom').textContent='zoom: wide';}
+ var c0=curPay(income),c1=curPay(income+1),p0=propPay(income),p1=propPay(income+1),dc=c1-c0,dp=p1-p0;
+ $('curV').textContent=fmt(c0)+'/mo';$('propV').textContent=fmt(p0)+'/mo';
+ $('curS').innerHTML='credit '+fmt(cur(income))+' · after +$1 ('+fmt(income+1)+'): '+fmt(c1)+' <span class="delta '+(dc>1?'bad':'ok')+'">('+sign(dc)+'/mo)</span>'+(income>CUT?'<br>above cutoff → credit 0 by <code>current_credit_zero_above_cutoff</code>':'');
+ $('propS').innerHTML='credit '+fmt(prop(income))+' · after +$1 ('+fmt(income+1)+'): '+fmt(p1)+' <span class="delta '+(dp>1?'bad':'ok')+'">('+sign(dp)+'/mo)</span><br>'+(income>CUT?'taper: 141 − ⌊('+(income-CUT)+'·141)/7825⌋':(income<LOW?'below modeled band':'same as current law'));
+ var holds=p1<=p0+1;$('liveCheck').textContent=holds?'✓ instance holds at income = '+income:'✗ REFUTED at '+income;$('liveCheck').className='badge '+(holds?'ok':'warn');
+ drawChart();}
+function drawChart(){
+ var W=640,H=230,L=52,R=12,T=14,B=30,lo=zoomWide?44000:CUT-150,hi=zoomWide?74000:CUT+150;
+ function x(v){return L+(v-lo)/(hi-lo)*(W-L-R);} function y(v){return T+(1-(v-300)/(PREM+20-300))*(H-T-B);}
+ var step=zoomWide?Math.max(1,Math.round((hi-lo)/600)):1;
+ function path(f){var d='';for(var i=lo;i<=hi;i+=step){d+=(d?'L':'M')+x(i).toFixed(1)+' '+y(f(i)).toFixed(1)+' ';}return d;}
+ var s='';
+ [300,400,500,600,661].forEach(function(v){s+='<line x1="'+L+'" x2="'+(W-R)+'" y1="'+y(v)+'" y2="'+y(v)+'" stroke="#eee"/><text class="axis" x="'+(L-4)+'" y="'+(y(v)+4)+'" text-anchor="end">$'+v+'</text>';});
+ var ticks=zoomWide?[46950,52000,57000,62600,67000,70425]:[CUT-150,CUT-75,CUT,CUT+75,CUT+150];
+ ticks.forEach(function(v){s+='<text class="axis" x="'+x(v)+'" y="'+(H-B+14)+'" text-anchor="middle">'+v.toLocaleString('en-US')+'</text>';});
+ s+='<line x1="'+x(CUT)+'" x2="'+x(CUT)+'" y1="'+T+'" y2="'+(H-B)+'" stroke="#bbb" stroke-dasharray="3 3"/><text class="axis" x="'+(x(CUT)+3)+'" y="'+(T+10)+'">400% FPL</text>';
+ s+='<path d="'+path(curPay)+'" fill="none" stroke="#c2402f" stroke-width="2.2"/>';
+ if(showProp)s+='<path d="'+path(propPay)+'" fill="none" stroke="#2f7d4f" stroke-width="2.2"/>';
+ if(income>=lo&&income<=hi){s+='<circle cx="'+x(income)+'" cy="'+y(curPay(income))+'" r="5" fill="#c2402f" stroke="#fff"/>';if(showProp)s+='<circle cx="'+x(income)+'" cy="'+y(propPay(income))+'" r="5" fill="#2f7d4f" stroke="#fff"/>';}
+ else s+='<text class="axis" x="'+(W/2)+'" y="'+(T+10)+'" text-anchor="middle">income '+fmt(income)+' is outside the plotted window (premium '+fmt(curPay(income))+' / '+fmt(propPay(income))+')</text>';
+ s+='<text class="axis" x="'+(W-R)+'" y="'+(H-4)+'" text-anchor="end">annual MAGI →</text><text class="axis" x="'+(L-4)+'" y="'+(T-3)+'" text-anchor="end">$/mo</text>';
+ $('chart').innerHTML=s;}
+// ---- native Lean via the local server: same origin when served from it, else 127.0.0.1:8768 ----
+var API=(location.protocol==='http:'||location.protocol==='https:')&&/:8768$/.test(location.host)?'':'http://127.0.0.1:8768';
+var leanOK=null;
+function queryLean(){clearTimeout(liveTimer);liveTimer=setTimeout(function(){var i=income;
+ fetch(API+'/api/ptc?income='+i,{cache:'no-store'}).then(function(r){if(!r.ok)throw 0;return r.json();}).then(function(d){if(i!==income)return;leanOK=true;
+  var ok=d.current.premium===curPay(i)&&d.proposed.premium===propPay(i)&&d.currentAfterRaise.premium===curPay(i+1)&&d.proposedAfterRaise.premium===propPay(i+1);
+  $('leanLive').innerHTML='<span class="badge lean">native Lean · lake exe tax_game ptc '+i+'</span> <span class="badge '+(ok?'ok':'warn')+'">'+(ok?'✓ JS mirror agrees':'✗ mirror mismatch')+'</span> <span class="src">current '+fmt(d.current.premium)+'→'+fmt(d.currentAfterRaise.premium)+' · proposed '+fmt(d.proposed.premium)+'→'+fmt(d.proposedAfterRaise.premium)+' · proposedNoCliffHolds: '+d.proposedNoCliffHolds+'</span>';
+  $('status').textContent='numbers: compiled Lean (port 8768)';
+ }).catch(function(){if(leanOK!==false){leanOK=false;
+  $('leanLive').innerHTML='<span class="badge warn">offline: JS mirror of the Lean definitions</span> <span class="src">start <code>python3 demo.py --port 8768</code> to route every point through the compiled Lean binary.</span>';
+  $('status').textContent='numbers: JS mirror (server not reachable)';}});
+ },120);}
+go(0);
+})();
+</script></body></html>

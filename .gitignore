@@ -1,0 +1,10 @@
+.DS_Store
+__pycache__/
+*.pyc
+.lake/
+lake-packages/
+build/
+.venv/
+node_modules/
+*.md.html
+site/

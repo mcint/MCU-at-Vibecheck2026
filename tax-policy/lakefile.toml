@@ -1,0 +1,14 @@
+name = "tax_game"
+version = "0.1.0"
+defaultTargets = ["tax_game"]
+
+[[lean_lib]]
+name = "TaxGame"
+
+[[lean_lib]]
+name = "LeanContracts"
+srcDir = "vendor"
+
+[[lean_exe]]
+name = "tax_game"
+root = "Main"

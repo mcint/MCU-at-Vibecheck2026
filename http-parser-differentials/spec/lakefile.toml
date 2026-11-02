@@ -1,0 +1,12 @@
+name = "parserdiff"
+defaultTargets = ["ParserDiff", "Tests", "pd"]
+
+[[lean_lib]]
+name = "ParserDiff"
+
+[[lean_lib]]
+name = "Tests"
+
+[[lean_exe]]
+name = "pd"
+root = "Main"
