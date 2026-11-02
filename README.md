@@ -1,6 +1,6 @@
 # MCU · Vibecheck 2026
 
-[FMxAI](https://fmxai.org) · [Vibecheck hackathon](https://fmxai.org/vibecheck/) — the usable formal methods hackathon, Nov 1–2 2026, SF.
+[FMxAI](https://fmxai.org) · [Vibecheck hackathon](https://fmxai.org/vibecheck/) — the usable formal methods hackathon, Oct 31 – Nov 1 2026, SF.
 
 **Live site: https://mcint.github.io/MCU-at-Vibecheck2026/** — all demos, static, no install. Source: this repo.
 
@@ -12,7 +12,7 @@
 | extra | Rulebreakers (vending) | [demo](https://mcint.github.io/MCU-at-Vibecheck2026/vending/web/index.html) | a drink or your coin back — never both; a recorded Claude attack replays | `accepted_repaired_history_safe` — repaired policy safe for every move sequence |
 | extra | abc / abc-1 | [demo](https://mcint.github.io/MCU-at-Vibecheck2026/abc/demo/index.html) · [plots](https://mcint.github.io/MCU-at-Vibecheck2026/abc/plots/index.html) | click one number to double it, the others drop; start 2 dies, 3 is capped, 4 is unbounded | `trapped3`, `unbounded4_score`, `spam_optimal` for every horizon (`abc/`) |
 
-Team **MCU** — FMxAI Vibecheck (usable formal methods) hackathon, Nov 1–2 2026, SF.
+Team **MCU** — FMxAI Vibecheck (usable formal methods) hackathon, Oct 31 – Nov 1 2026, SF.
 
 ## Viewing
 - **Static demos** (HTTP, fault-analysis): open `index.html` directly, or the folder's own
