@@ -135,4 +135,4 @@ disagree, and the RFC 9112 sentence each one leaned on."
 - Is passive header-order fingerprinting reliable enough to seed the stack guess, or do we
   need active (benign) probes? Prefer passive for the demo.
 - Which gateways default to HTTP/2 upstream (changes parser C from H1 to H2 translation)?
-- Build `data/stacks.csv` + a join script; this is a good `gimel`/Ven task.
+- Build `data/stacks.csv` + a join script; this is a good follow-up task.
