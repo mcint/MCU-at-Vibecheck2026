@@ -4,16 +4,46 @@
 
 **Live site: https://mcint.github.io/MCU-at-Vibecheck2026/** — all demos, static, no install. Source: this repo.
 
-**1 · HTTP parser differentials** — [matrix view](https://mcint.github.io/MCU-at-Vibecheck2026/http-parser-differentials/index.html) · [hinge + timeline](https://mcint.github.io/MCU-at-Vibecheck2026/http-parser-differentials/index-v2.html) · [detailed](https://mcint.github.io/MCU-at-Vibecheck2026/http-parser-differentials/index-detailed.html).
-One crafted HTTP request is fanned out across parser profiles (strict RFC 9112, TE-first, CL-first, last-CL, TE-ignoring, obs-fold, bare-LF) and each column says how many body bytes it would frame, or that it rejects. Pick a front end and a back end and the pair lights **DESYNC** (they disagree where the next request begins — smuggling) or **SAFE** (the back end rejects). The bytes each parser keyed on are highlighted — the *hinge* — and a history ↔ current timeline marks which behaviours were found and fixed (Watchfire 2005, Kettle 2019, HTTP Garden 2024) and which still legitimately diverge today. Lean (`spec/`) proves `refines_no_desync` — a back end that accepts a subset of what the front end accepts cannot be smuggled through — and `desync_hinge` — every desync is two parsers keyed on *different* fields.
+## In one line each
+1. **HTTP parser differentials** — two parsers read the same bytes differently; make the back end stricter and that can't be exploited — proven.
+2. **Policy Lab** — a $1 raise costs a family $1,691 under the 2026 tax rule; the repaired rule can never do that, for any income — proven.
+3. **Fault analysis** — four famous accidents are each a counterexample to a safety rule nobody had written down; here it is written down.
 
-**2 · Policy Lab — the $1 raise that costs $1,691** — [demo](https://mcint.github.io/MCU-at-Vibecheck2026/tax-policy/demo/index.html).
-The 2026 ACA premium-tax-credit cliff on an income slider: at $62,600 the credit is $141/month; a $1 raise zeroes it. Find the bad rule, repair it (taper the credit over the next $7,825), and watch both curves. Lean (`TaxGame/`) gives `current_has_cliff` — a concrete witness — against `proposed_no_cliff` — for **every** income, a $1 raise costs at most $1 under the repaired rule. The live page mirrors the Lean definitions in JS and upgrades to the compiled Lean binary when the local server is running.
+*Extras:* **Rulebreakers** — a vending machine that can't give you both the drink and your coin, whatever Claude tries. **abc / abc-1** — a three-number clicking game where the kernel tells you which starting values are doomed, trapped, or unbounded.
 
-**3 · Fault-analysis walk-throughs** — [demo](https://mcint.github.io/MCU-at-Vibecheck2026/fault-analysis/index.html).
-737 MAX, Three Mile Island, Therac-25 and Cloudflare 2019 through one control-safety lens: hazard, constraint, unsafe control action, and the loosening that would have been safe. Safety-I/II/III example rules per scenario. The four scenarios are machine-checkable step specs (`analysis/*.json`); a Lean model of the invariants is the next step.
+## Each demo
 
-**Extras** — same method, smaller stakes. *Rulebreakers* ([demo](https://mcint.github.io/MCU-at-Vibecheck2026/vending/web/index.html)): a drink or your coin back, never both; a recorded Claude attack replays against the old rules and Lean checks every move of the repaired policy (`accepted_repaired_history_safe`). *abc / abc-1* ([demo](https://mcint.github.io/MCU-at-Vibecheck2026/abc/demo/index.html) · [plots](https://mcint.github.io/MCU-at-Vibecheck2026/abc/plots/index.html)): click one of three numbers to double it, the others drop by one; start at 2 and you are dead in two moves, at 3 immortal but capped, at 4 unbounded — and with the floor removed, spam beats any balanced play at every horizon (`trapped3`, `unbounded4_score`, `spam_optimal`, all kernel-checked).
+### 1 · HTTP parser differentials
+[matrix view](https://mcint.github.io/MCU-at-Vibecheck2026/http-parser-differentials/index.html) · [hinge + timeline](https://mcint.github.io/MCU-at-Vibecheck2026/http-parser-differentials/index-v2.html) · [detailed](https://mcint.github.io/MCU-at-Vibecheck2026/http-parser-differentials/index-detailed.html)
+
+**What it is.** One crafted HTTP request is fanned out across parser profiles (strict RFC 9112, TE-first, CL-first, last-CL, TE-ignoring, obs-fold, bare-LF). Each column says how many body bytes it would frame, or that it rejects. Pick a front end and a back end: the pair lights **DESYNC** when they disagree where the next request begins — that gap is a smuggled request — or **SAFE** when the back end rejects.
+
+**What to look at.** The *hinge*: the header bytes each parser keyed on are highlighted, and the readout says "front end keyed on `Content-Length[0]`; back end keyed on `Transfer-Encoding`". The detailed view adds, per column, how it parsed, the RFC sentence it leaned on, and whether it matches the Lean reference. A history ↔ current timeline marks which behaviours were found and fixed (Watchfire 2005, Kettle 2019, HTTP Garden 2024) and which still legitimately diverge today.
+
+**What Lean proves** (`spec/ParserDiff/`). `refines_no_desync`: if the back end accepts a subset of what the front end accepts and agrees wherever both accept, no message can desync them in either direction — so a strict back end ends the attack class. `desync_hinge`: over the whole modelled message space, every desync is two parsers keyed on *different* fields; the divergence is always located at a hinge.
+
+### 2 · Policy Lab — the $1 raise that costs $1,691
+[demo](https://mcint.github.io/MCU-at-Vibecheck2026/tax-policy/demo/index.html)
+
+**What it is.** The 2026 ACA premium-tax-credit cliff on an income slider. At $62,600 the credit is $141/month; a $1 raise zeroes it — same plan, $520 → $661 a month. Find the bad rule, repair it (taper the credit over the next $7,825), and watch both curves.
+
+**What to look at.** Drag the slider, hammer "+$1 raise" at any income: every point is re-evaluated and the theorem instance lights green. The page mirrors the Lean definitions in JS and upgrades to the compiled Lean binary when the local server is running (`cd tax-policy && python3 demo.py --port 8768`).
+
+**What Lean proves** (`TaxGame/`). `current_has_cliff`: a concrete witness income where $1 costs $141. `proposed_no_cliff`: for **every** income, a $1 raise raises the monthly premium by at most $1 under the repaired rule — a real ∀, via a Lipschitz lemma; axioms `propext`, `Quot.sound` only.
+
+### 3 · Fault-analysis walk-throughs
+[demo](https://mcint.github.io/MCU-at-Vibecheck2026/fault-analysis/index.html)
+
+**What it is.** 737 MAX, Three Mile Island, Therac-25 and Cloudflare 2019 through one control-safety lens: hazard, constraint, unsafe control action, and the loosening that *would* have been safe. Switch scenarios top-left; each has Safety-I / II / III example rules.
+
+**What to look at.** The moment in each walk-through where the accident becomes a counterexample to an invariant — and the finale, where a rule is loosened *without* reopening the hazard.
+
+**What is formal.** The four scenarios are machine-checkable step specs (`analysis/*.json`). A Lean model of the invariants is the next step; the page says so.
+
+### Extras — same method, smaller stakes
+**Rulebreakers** ([demo](https://mcint.github.io/MCU-at-Vibecheck2026/vending/web/index.html)). A drink or your coin back, never both. A recorded Claude attack replays against the old rules and succeeds; against the repaired policy Lean checks every move (`accepted_repaired_history_safe`: no accepted history ends with both coin and drink with the player). Live attacks and the two-buyer round need the local server (`cd vending && python3 demo.py --port 8766`).
+
+**abc / abc-1** ([demo](https://mcint.github.io/MCU-at-Vibecheck2026/abc/demo/index.html) · [plots](https://mcint.github.io/MCU-at-Vibecheck2026/abc/plots/index.html)). Click one of three numbers to double it; the other two drop by one. Start at 2 and you are dead in two moves (`doomed2`); at 3, immortal but never all above 3 (`trapped3`, every play of every length); at 4, unbounded (`unbounded4_score`). Remove the floor so values go negative, score by product, and spam beats every balanced play at every horizon (`spam_optimal`, no enumeration) — your balance heuristic's hidden premise was an additive trade.
 
 Team **MCU** — FMxAI Vibecheck (usable formal methods) hackathon, Oct 31 – Nov 1 2026, SF.
 
