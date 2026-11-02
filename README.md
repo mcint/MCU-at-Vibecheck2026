@@ -1,6 +1,6 @@
 # MCU · Vibecheck 2026
 
-Team **MCU** — FMxAI Vibecheck (usable formal methods) hackathon. Five demos: build real
+Team **MCU** — FMxAI Vibecheck (usable formal methods) hackathon. Three demos (plus two extras): build real
 software, formally verify it, and show on screen *what Lean checked*.
 
 Open **`index.html`** for all three embedded in one page, or open any demo folder standalone.
@@ -8,10 +8,10 @@ Open **`index.html`** for all three embedded in one page, or open any demo folde
 | demo | folder | viewing | the point |
 |---|---|---|---|
 | **HTTP parser differentials** | [`http-parser-differentials/`](http-parser-differentials/index.html) | **static** (offline) | one crafted request, N parsers, different framings → request smuggling; a front-end × back-end matrix shows which pairings desync |
-| **Fault-analysis walk-throughs** | [`fault-analysis/`](fault-analysis/index.html) | **static** (offline) | 737 MAX, Three Mile Island, Therac-25, Cloudflare (2019) through one control-safety lens; Safety-I/II/III example rules; a safe-loosening finale |
-| **Rulebreakers (vending)** | [`vending/`](vending/web/index.html) | **static** (recorded run) / server for live Lean | a drink or your coin back — never both; Claude attacks, Lean checks the repaired policy |
-| **abc / abc-1** | [`abc/`](abc/demo/index.html) | **static** | the 2→3→4 feasibility ladder and `spam_optimal` for every horizon — all kernel-checked |
 | **Policy Lab (tax cliff)** | [`tax-policy/`](tax-policy/README.md) | **server** (Lean-backed) | the 2026 ACA premium-tax-credit cliff: find the bad rule, repair it, Lean checks the repair ∀ income |
+| **Fault-analysis walk-throughs** | [`fault-analysis/`](fault-analysis/index.html) | **static** (offline) | 737 MAX, Three Mile Island, Therac-25, Cloudflare (2019) through one control-safety lens; Safety-I/II/III example rules; a safe-loosening finale |
+| *extra:* **Rulebreakers (vending)** | [`vending/`](vending/web/index.html) | **static** (recorded run) / server for live Lean | a drink or your coin back — never both; Claude attacks, Lean checks the repaired policy |
+| *extra:* **abc / abc-1** | [`abc/`](abc/demo/index.html) | **static** | the 2→3→4 feasibility ladder and `spam_optimal` for every horizon — all kernel-checked |
 
 ## Viewing
 - **Static demos** (HTTP, fault-analysis): open `index.html` directly, or the folder's own

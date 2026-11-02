@@ -10,6 +10,7 @@ header{padding:1rem 1.3rem .4rem}h1{font-size:1.3rem;margin:0}.sub{color:var(--d
 nav{display:flex;gap:.4rem;flex-wrap:wrap;padding:.7rem 1.3rem;border-bottom:1px solid var(--line);position:sticky;top:0;background:var(--bg);z-index:3}
 nav button{font:inherit;border:1px solid var(--line);background:var(--card);color:var(--ink);border-radius:999px;padding:.25rem .8rem;cursor:pointer}
 nav button.on{background:var(--acc);color:#fff;border-color:var(--acc)}
+nav button.extra{opacity:.65;font-size:.85em}.extras{color:var(--dim);font-size:.85rem;margin:.6rem 0 .3rem;padding-top:.6rem;border-top:1px dashed var(--line)}
 main{padding:1rem 1.3rem;max-width:1400px;margin:0 auto}
 section{display:none}section.on{display:block}
 .bar{display:flex;gap:1rem;align-items:baseline;flex-wrap:wrap;margin-bottom:.5rem}
@@ -23,7 +24,7 @@ iframe{width:100%;height:76vh;border:1px solid var(--line);border-radius:10px;ba
 footer{color:var(--dim);font-size:.8rem;padding:1.5rem 1.3rem}
 </style></head><body>
 <header><h1>MCU · Vibecheck 2026</h1>
-<div class="sub">Five demos: usable software, formally verified. Each is viewable here (embedded) and standalone in its own folder. Lean does the checking; the on-screen artifact shows what it checked.</div></header>
+<div class="sub">Three demos (+ two extras): usable software, formally verified. Each is viewable here (embedded) and standalone in its own folder. Lean does the checking; the on-screen artifact shows what it checked.</div></header>
 <nav id="nav"></nav>
 <main>
  <section id="s-http" class="on">
@@ -31,12 +32,6 @@ footer{color:var(--dim);font-size:.8rem;padding:1.5rem 1.3rem}
      <a href="http-parser-differentials/index.html" target="_blank">open standalone ↗</a> · <a href="http-parser-differentials/index-v2.html" target="_blank">v2: hinge view, legend, history↔current timeline ↗</a> · <a href="http-parser-differentials/index-detailed.html" target="_blank">v1 detailed ↗</a></div>
    <iframe src="http-parser-differentials/index.html" title="HTTP parser differentials"></iframe>
    <div class="refs">refs: <a href="http-parser-differentials/refs/BACKGROUND.md">BACKGROUND</a> · <a href="http-parser-differentials/refs/HTTP.md">HTTP (separability)</a> · <a href="http-parser-differentials/refs/HTTP-RECON.md">stack fingerprinting</a> · spec: <a href="http-parser-differentials/spec/">Lean model</a></div>
- </section>
- <section id="s-fault">
-   <div class="bar"><h2>Fault-analysis walk-throughs</h2><span class="pitch">The same control-safety lens across four real accidents — 737 MAX, Three Mile Island, Therac-25, Cloudflare 2019 — with Safety-I/II/III example rules and a safe-loosening finale. Switch scenarios top-left.</span>
-     <a href="fault-analysis/index.html" target="_blank">open standalone ↗</a></div>
-   <iframe src="fault-analysis/index.html" title="Fault-analysis walk-throughs"></iframe>
-   <div class="refs">refs: <a href="fault-analysis/refs/CONCEPT.md">CONCEPT</a> · <a href="fault-analysis/refs/RESOURCES.md">RESOURCES (history)</a> · <a href="fault-analysis/refs/GLOSSARY.md">GLOSSARY</a> · specs: <a href="fault-analysis/analysis/">scenario JSON</a></div>
  </section>
  <section id="s-tax">
    <div class="bar"><h2>Policy Lab — the $1 raise that costs $1,691</h2><span class="pitch">The 2026 ACA premium-tax-credit cliff: find the bad rule, repair it, and Lean's kernel checks the repair for every income.</span>
@@ -46,7 +41,13 @@ footer{color:var(--dim);font-size:.8rem;padding:1.5rem 1.3rem}
    <iframe src="tax-policy/demo/index.html?embed=1" title="Policy Lab — static demo (JS mirror of the Lean definitions; auto-upgrades to compiled Lean when the server on 8768 is running)"></iframe>
    <div class="refs">theorem: <code>current_has_cliff</code> (a witness) vs <code>proposed_no_cliff</code> (∀ income). specs: <a href="tax-policy/TaxGame/">TaxGame/*.lean</a> · <a href="tax-policy/vendor/catala/">Catala source</a></div>
  </section>
-
+ <section id="s-fault">
+   <div class="bar"><h2>Fault-analysis walk-throughs</h2><span class="pitch">The same control-safety lens across four real accidents — 737 MAX, Three Mile Island, Therac-25, Cloudflare 2019 — with Safety-I/II/III example rules and a safe-loosening finale. Switch scenarios top-left.</span>
+     <a href="fault-analysis/index.html" target="_blank">open standalone ↗</a></div>
+   <iframe src="fault-analysis/index.html" title="Fault-analysis walk-throughs"></iframe>
+   <div class="refs">refs: <a href="fault-analysis/refs/CONCEPT.md">CONCEPT</a> · <a href="fault-analysis/refs/RESOURCES.md">RESOURCES (history)</a> · <a href="fault-analysis/refs/GLOSSARY.md">GLOSSARY</a> · specs: <a href="fault-analysis/analysis/">scenario JSON</a></div>
+ </section>
+ <div class="extras" style="display:none">Extras — supporting demos (not part of the core submission): same method, smaller stakes.</div>
  <section id="s-vend">
    <div class="bar"><h2>Rulebreakers — the vending machine</h2><span class="pitch">A drink or your coin back — never both. Claude attacks the old rules (recorded run replays offline); Lean's kernel checks every move of the repaired policy.</span>
      <a href="vending/web/index.html" target="_blank">open standalone ↗</a> · <a href="vending/DEMO-NOTES.md" target="_blank">notes ↗</a></div>
@@ -60,13 +61,14 @@ footer{color:var(--dim);font-size:.8rem;padding:1.5rem 1.3rem}
    <div class="refs">theorems (kernel, zero sorry): <code>doomed2</code> · <code>trapped3 : ∀ p, score (runFrom .sat ⟨3,3,3⟩ p) ≤ 3</code> · <code>unbounded4_score</code> · <code>spam_optimal : ∀ p, 2 ≤ p.length → prod (runFrom .nosat s1 p) ≤ 2^N·(N−1)²</code>. specs: <a href="abc/Abc.lean">Abc.lean</a> · <a href="abc/Optimal.lean">Optimal.lean</a> · <a href="abc/Perturb.lean">Perturb.lean</a>. Terminal twin: <code>cd abc &amp;&amp; lake exe abc abc 9</code>.</div>
  </section>
 </main>
-<footer>Team <b>MCU</b> · FMxAI Vibecheck 2026 · each demo folder is self-contained and static-viewable; Policy Lab and Rulebreakers upgrade to live Lean adjudication when their local servers run. Source: <a href="https://github.com/mcint/MCU-at-Vibecheck2026">github.com/mcint/MCU-at-Vibecheck2026</a>.</footer>
+<footer>Team <b>MCU</b> · FMxAI Vibecheck 2026 · core submission: HTTP parser differentials, Policy Lab, fault analysis; extras: Rulebreakers, abc. Each folder is self-contained and static-viewable; Policy Lab and Rulebreakers upgrade to live Lean adjudication when their local servers run. Source: <a href="https://github.com/mcint/MCU-at-Vibecheck2026">github.com/mcint/MCU-at-Vibecheck2026</a>.</footer>
 <script>
-const T=[['s-http','HTTP parser differentials'],['s-fault','Fault analysis (737 MAX · TMI · Therac · CF)'],['s-tax','Policy Lab (tax cliff)'],['s-vend','Rulebreakers (vending)'],['s-abc','abc / abc-1 (proven par)']];
+const T=[['s-http','1 · HTTP parser differentials'],['s-tax','2 · Policy Lab (tax cliff)'],['s-fault','3 · Fault analysis (737 MAX · TMI · Therac · CF)'],['s-vend','extra · Rulebreakers'],['s-abc','extra · abc / abc-1']];
 const nav=document.getElementById('nav');
-nav.innerHTML=T.map(([id,label],k)=>`<button class="${k===0?'on':''}" data-id="${id}">${label}</button>`).join('');
+nav.innerHTML=T.map(([id,label],k)=>`<button class="${k===0?'on':''}${label.startsWith('extra')?' extra':''}" data-id="${id}">${label}</button>`).join('');
 nav.querySelectorAll('button').forEach(b=>b.onclick=()=>{
  document.querySelectorAll('nav button').forEach(x=>x.classList.remove('on'));b.classList.add('on');
  document.querySelectorAll('main section').forEach(s=>s.classList.toggle('on',s.id===b.dataset.id));
+ document.querySelector('.extras').style.display=b.classList.contains('extra')?'block':'none';
 });
 </script></body></html>
